@@ -1,9 +1,12 @@
+"use client";
+
 import { CircleDollarSign, TrendingDown, WalletCards } from "lucide-react";
 
+import { useLocalStore } from "@/components/local-store";
 import { MetricCard } from "@/components/metric-card";
-import { projects } from "@/lib/mock-data";
 
 export default function BudgetPage() {
+  const { projects } = useLocalStore();
   const planned = projects.reduce((sum, project) => sum + project.budgetMinor, 0);
   const spent = projects.reduce((sum, project) => sum + project.spentMinor, 0);
   const remaining = planned - spent;

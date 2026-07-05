@@ -1,0 +1,93 @@
+"use client";
+
+import Link from "next/link";
+import { MoreHorizontal } from "lucide-react";
+
+import { AvatarStack } from "@/components/avatar-stack";
+import { StatusBadge } from "@/components/status-badge";
+import { localToday, team } from "@/lib/mock-data";
+import {
+  calculateProjectProgress,
+  getProjectScheduleStatus,
+} from "@/lib/progress";
+import type { Project } from "@/lib/types";
+
+type ProjectTab = "overview" | "schedule" | "budget" | "files" | "activity";
+
+const tabs: Array<{ key: ProjectTab; label: string }> = [
+  { key: "overview", label: "Overview" },
+  { key: "schedule", label: "Schedule" },
+  { key: "budget", label: "Budget" },
+  { key: "files", label: "Files" },
+  { key: "activity", label: "Activity" },
+];
+
+export function ProjectWorkspace({
+  project,
+  activeTab,
+  actions,
+  children,
+}: {
+  project: Project;
+  activeTab: ProjectTab;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const progress = calculateProjectProgress(project.tasks);
+  const status = getProjectScheduleStatus(project, localToday);
+  const members = team.filter((member) => project.teamIds.includes(member.id));
+
+  return (
+    <div className="schedule-page">
+      <div className="breadcrumbs">
+        <Link href="/app/projects">Projects</Link>
+        <span aria-hidden="true">/</span>
+        <span>{project.name}</span>
+      </div>
+
+      <header className="project-heading">
+        <div>
+          <div className="project-title-row">
+            <span className="project-code">{project.code}</span>
+            <StatusBadge status={status} />
+          </div>
+          <h1>{project.name}</h1>
+          <p>
+            {project.location} · {project.startDate} — {project.endDate}
+          </p>
+        </div>
+        <div className="project-heading-actions">
+          <div className="project-progress-summary">
+            <span>{progress}% complete</span>
+            <div className="progress-track small">
+              <span style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+          <AvatarStack members={members} limit={4} />
+          {actions}
+          <button
+            aria-label="More project actions"
+            className="icon-button"
+            type="button"
+          >
+            <MoreHorizontal aria-hidden="true" size={18} />
+          </button>
+        </div>
+      </header>
+
+      <nav className="project-tabs" aria-label="Project sections">
+        {tabs.map((tab) => (
+          <Link
+            className={activeTab === tab.key ? "active" : ""}
+            href={`/app/projects/${project.id}/${tab.key}`}
+            key={tab.key}
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
+
+      {children}
+    </div>
+  );
+}

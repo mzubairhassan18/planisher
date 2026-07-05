@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -5,13 +7,14 @@ import {
   CircleDollarSign,
   Clock3,
   FolderKanban,
-  Plus,
   TriangleAlert,
 } from "lucide-react";
 
+import { NewProjectButton } from "@/components/action-buttons";
+import { useLocalStore } from "@/components/local-store";
 import { MetricCard } from "@/components/metric-card";
 import { ProjectCard } from "@/components/project-card";
-import { activity, getMember, getProject, localToday, projects } from "@/lib/mock-data";
+import { getMember, localToday } from "@/lib/mock-data";
 import {
   countTasksByStatus,
   getLeafTasks,
@@ -19,6 +22,7 @@ import {
 } from "@/lib/progress";
 
 export default function DashboardPage() {
+  const { activity, projects } = useLocalStore();
   const activeTasks = projects.flatMap((project) =>
     getLeafTasks(project.tasks),
   );
@@ -41,10 +45,7 @@ export default function DashboardPage() {
           <h1>Good afternoon, Amina.</h1>
           <p>Here is what needs your attention across the build programme.</p>
         </div>
-        <Link className="primary-button" href="/app/projects?create=true">
-          <Plus aria-hidden="true" size={17} />
-          New project
-        </Link>
+        <NewProjectButton />
       </header>
 
       <section className="metric-grid" aria-label="Workspace summary">
@@ -140,7 +141,9 @@ export default function DashboardPage() {
           </div>
           {activity.map((item) => {
             const member = getMember(item.actorId);
-            const project = getProject(item.projectId);
+            const project = projects.find(
+              (candidate) => candidate.id === item.projectId,
+            );
 
             return (
               <div className="activity-row" key={item.id}>

@@ -62,6 +62,7 @@ export function getProjectScheduleStatus(
   const leafTasks = getLeafTasks(project.tasks);
   const progress = calculateProjectProgress(project.tasks);
 
+  if (leafTasks.length === 0) return "not_started";
   if (progress >= 100) return "completed";
   if (leafTasks.some((task) => getTaskScheduleStatus(task, today) === "delayed")) {
     return "delayed";

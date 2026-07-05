@@ -1,6 +1,13 @@
-import { CopyPlus, Library } from "lucide-react";
+"use client";
+
+import { CalendarRange, Library } from "lucide-react";
+
+import { NewTemplateButton } from "@/components/action-buttons";
+import { useLocalStore } from "@/components/local-store";
 
 export default function TemplatesPage() {
+  const { projects, templates } = useLocalStore();
+
   return (
     <div>
       <header className="page-heading heading-with-action">
@@ -9,19 +16,50 @@ export default function TemplatesPage() {
           <h1>Templates</h1>
           <p>Turn a successful project structure into the next calm start.</p>
         </div>
-        <button className="primary-button" type="button">
-          <CopyPlus aria-hidden="true" size={17} />
-          Create template
-        </button>
+        <NewTemplateButton />
       </header>
-      <article className="content-card placeholder-card">
-        <Library aria-hidden="true" size={28} />
-        <h2>No saved templates yet</h2>
-        <p>
-          Duplicate Riverside Villa after the schedule prototype is approved;
-          tasks and dependencies will copy while historical progress stays behind.
-        </p>
-      </article>
+      {templates.length ? (
+        <div className="template-grid">
+          {templates.map((template) => {
+            const source = projects.find(
+              (project) => project.id === template.sourceProjectId,
+            );
+            return (
+              <article className="content-card template-card" key={template.id}>
+                <div className="template-card-icon">
+                  <CalendarRange aria-hidden="true" size={20} />
+                </div>
+                <span className="eyebrow">Project template</span>
+                <h2>{template.name}</h2>
+                <p>{template.description || "Reusable construction plan."}</p>
+                <dl>
+                  <div>
+                    <dt>Tasks</dt>
+                    <dd>{template.tasks.length}</dd>
+                  </div>
+                  <div>
+                    <dt>Dependencies</dt>
+                    <dd>{template.dependencies.length}</dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>{source?.name ?? "Project"}</dd>
+                  </div>
+                </dl>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <article className="content-card placeholder-card">
+          <Library aria-hidden="true" size={28} />
+          <h2>No saved templates yet</h2>
+          <p>
+            Create one from an existing project. Tasks and dependencies copy
+            while historical progress stays behind.
+          </p>
+        </article>
+      )}
     </div>
   );
 }

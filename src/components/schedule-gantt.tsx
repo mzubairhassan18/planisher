@@ -11,22 +11,37 @@ type ViewMode = "day" | "week" | "month";
 export function ScheduleGantt({
   project,
   today,
+  onAddTask,
+  onSelectTask,
+  onUpdateProgress,
 }: {
   project: Project;
   today: Date;
+  onAddTask: () => void;
+  onSelectTask: (taskId: string) => void;
+  onUpdateProgress: (taskId: string, progress: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const ganttRef = useRef<
+    (typeof import("dhtmlx-gantt"))["gantt"] | null
+  >(null);
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [query, setQuery] = useState("");
+  const [delayedOnly, setDelayedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const visibleTasks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return project.tasks;
-
     const matchingIds = new Set(
       project.tasks
-        .filter((task) => task.title.toLowerCase().includes(normalizedQuery))
+        .filter((task) => {
+          const matchesQuery =
+            !normalizedQuery ||
+            task.title.toLowerCase().includes(normalizedQuery);
+          const matchesStatus =
+            !delayedOnly || getTaskScheduleStatus(task, today) === "delayed";
+          return matchesQuery && matchesStatus;
+        })
         .map((task) => task.id),
     );
 
@@ -37,7 +52,7 @@ export function ScheduleGantt({
     });
 
     return project.tasks.filter((task) => matchingIds.has(task.id));
-  }, [project.tasks, query]);
+  }, [delayedOnly, project.tasks, query, today]);
 
   useEffect(() => {
     let disposed = false;
@@ -51,6 +66,7 @@ export function ScheduleGantt({
 
       const { gantt } = ganttModule;
       ganttInstance = gantt;
+      ganttRef.current = gantt;
       gantt.clearAll();
 
       gantt.config.date_format = "%Y-%m-%d";
@@ -116,6 +132,23 @@ export function ScheduleGantt({
       gantt.templates.progress_text = (_start, _end, ganttTask) =>
         `${Math.round((ganttTask.progress ?? 0) * 100)}%`;
 
+      const taskClickEvent = gantt.attachEvent(
+        "onTaskClick",
+        (taskId: string | number) => {
+          onSelectTask(String(taskId));
+          return true;
+        },
+      );
+      const progressUpdateEvent = gantt.attachEvent(
+        "onAfterTaskUpdate",
+        (taskId: string | number, ganttTask) => {
+          onUpdateProgress(
+            String(taskId),
+            Math.round((ganttTask.progress ?? 0) * 100),
+          );
+        },
+      );
+
       gantt.init(containerRef.current);
       gantt.parse({
         data: visibleTasks.map((task) => ({
@@ -150,15 +183,32 @@ export function ScheduleGantt({
 
       gantt.showDate(today);
       setLoading(false);
+
+      return () => {
+        gantt.detachEvent(taskClickEvent);
+        gantt.detachEvent(progressUpdateEvent);
+      };
     }
 
-    void renderGantt();
+    let detachEvents: (() => void) | undefined;
+    void renderGantt().then((detach) => {
+      detachEvents = detach;
+    });
 
     return () => {
       disposed = true;
+      detachEvents?.();
       ganttInstance?.clearAll();
+      ganttRef.current = null;
     };
-  }, [project.dependencies, today, viewMode, visibleTasks]);
+  }, [
+    onSelectTask,
+    onUpdateProgress,
+    project.dependencies,
+    today,
+    viewMode,
+    visibleTasks,
+  ]);
 
   return (
     <section className="schedule-panel" aria-label="Project schedule">
@@ -173,9 +223,14 @@ export function ScheduleGantt({
           />
         </label>
 
-        <button className="toolbar-button" type="button">
+        <button
+          aria-pressed={delayedOnly}
+          className={delayedOnly ? "toolbar-button active" : "toolbar-button"}
+          onClick={() => setDelayedOnly((active) => !active)}
+          type="button"
+        >
           <SlidersHorizontal aria-hidden="true" size={16} />
-          Filter
+          {delayedOnly ? "Delayed only" : "Filter"}
         </button>
 
         <div className="view-switcher" aria-label="Timeline scale">
@@ -194,13 +249,17 @@ export function ScheduleGantt({
         <button
           className="toolbar-button"
           type="button"
-          onClick={() => setViewMode("week")}
+          onClick={() => ganttRef.current?.showDate(today)}
         >
           <LocateFixed aria-hidden="true" size={16} />
           Today
         </button>
 
-        <button className="primary-button compact" type="button">
+        <button
+          className="primary-button compact"
+          onClick={onAddTask}
+          type="button"
+        >
           <CalendarDays aria-hidden="true" size={16} />
           Add task
         </button>

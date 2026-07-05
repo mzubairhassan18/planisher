@@ -1,9 +1,15 @@
-import { Filter, LayoutGrid, List, Plus, Search } from "lucide-react";
+"use client";
 
+import { Filter, LayoutGrid, List, Search } from "lucide-react";
+
+import { NewProjectButton } from "@/components/action-buttons";
+import { useLocalStore } from "@/components/local-store";
 import { ProjectCard } from "@/components/project-card";
-import { localToday, projects } from "@/lib/mock-data";
+import { localToday } from "@/lib/mock-data";
 
 export default function ProjectsPage() {
+  const { projects } = useLocalStore();
+
   return (
     <div>
       <header className="page-heading heading-with-action">
@@ -12,10 +18,7 @@ export default function ProjectsPage() {
           <h1>Projects</h1>
           <p>Every active build, its progress, and its current schedule status.</p>
         </div>
-        <button className="primary-button" type="button">
-          <Plus aria-hidden="true" size={17} />
-          New project
-        </button>
+        <NewProjectButton />
       </header>
 
       <div className="collection-toolbar">

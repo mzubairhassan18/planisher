@@ -51,6 +51,34 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  sourceProjectId: string;
+  description: string;
+  tasks: ProjectTask[];
+  dependencies: TaskDependency[];
+  createdAt: string;
+}
+
+export interface TaskComment {
+  id: string;
+  projectId: string;
+  taskId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface ProjectFile {
+  id: string;
+  projectId: string;
+  name: string;
+  sizeBytes: number;
+  type: string;
+  uploadedAt: string;
+}
+
 export interface ActivityItem {
   id: string;
   projectId: string;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   BarChart3,
   CalendarRange,
@@ -10,28 +11,55 @@ import {
   FolderKanban,
   LayoutDashboard,
   Library,
-  Plus,
   Search,
   Settings,
   Sparkles,
 } from "lucide-react";
 
 import { LocaleSummary } from "@/components/locale-summary";
-
-const navigation = [
-  { href: "/app", label: "Overview", icon: LayoutDashboard },
-  { href: "/app/projects", label: "Projects", icon: FolderKanban },
-  {
-    href: "/app/projects/riverside-villa/schedule",
-    label: "Schedule",
-    icon: CalendarRange,
-  },
-  { href: "/app/budget", label: "Budget", icon: BarChart3 },
-  { href: "/app/templates", label: "Templates", icon: Library },
-];
+import { NewProjectButton } from "@/components/action-buttons";
+import { useLocalStore } from "@/components/local-store";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { projects } = useLocalStore();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const primaryProjectId = projects[0]?.id ?? "riverside-villa";
+  const navigation = [
+    {
+      href: "/app",
+      label: "Overview",
+      icon: LayoutDashboard,
+      active: pathname === "/app",
+    },
+    {
+      href: "/app/projects",
+      label: "Projects",
+      icon: FolderKanban,
+      active:
+        pathname === "/app/projects" ||
+        (pathname.startsWith("/app/projects/") &&
+          !pathname.endsWith("/schedule")),
+    },
+    {
+      href: `/app/projects/${primaryProjectId}/schedule`,
+      label: "Schedule",
+      icon: CalendarRange,
+      active: pathname.endsWith("/schedule"),
+    },
+    {
+      href: "/app/budget",
+      label: "Budget",
+      icon: BarChart3,
+      active: pathname === "/app/budget",
+    },
+    {
+      href: "/app/templates",
+      label: "Templates",
+      icon: Library,
+      active: pathname === "/app/templates",
+    },
+  ];
 
   return (
     <div className="app-frame">
@@ -43,32 +71,59 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span>Planisher</span>
         </Link>
 
-        <button className="workspace-card" type="button">
-          <span className="workspace-monogram">CH</span>
-          <span>
-            <strong>CraftHaus</strong>
-            <small>Local workspace</small>
-          </span>
-          <ChevronDown aria-hidden="true" size={16} />
-        </button>
+        <div className="workspace-switcher">
+          <button
+            aria-expanded={switcherOpen}
+            aria-haspopup="menu"
+            className="workspace-card"
+            onClick={() => setSwitcherOpen((open) => !open)}
+            type="button"
+          >
+            <span className="workspace-monogram">CH</span>
+            <span>
+              <strong>CraftHaus</strong>
+              <small>Local workspace</small>
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              className={switcherOpen ? "chevron-open" : ""}
+              size={16}
+            />
+          </button>
+          {switcherOpen ? (
+            <div className="workspace-menu" role="menu">
+              <span className="workspace-menu-label">Open a project</span>
+              {projects.slice(0, 6).map((project) => (
+                <Link
+                  href={`/app/projects/${project.id}/overview`}
+                  key={project.id}
+                  onClick={() => setSwitcherOpen(false)}
+                  role="menuitem"
+                >
+                  <span>{project.code}</span>
+                  {project.name}
+                </Link>
+              ))}
+              <Link
+                href="/app/projects"
+                onClick={() => setSwitcherOpen(false)}
+                role="menuitem"
+              >
+                View all projects
+              </Link>
+            </div>
+          ) : null}
+        </div>
 
-        <Link className="create-project-button" href="/app/projects?create=true">
-          <Plus aria-hidden="true" size={17} />
-          New project
-        </Link>
+        <NewProjectButton className="create-project-button" />
 
         <nav className="primary-nav" aria-label="Primary navigation">
           <span className="nav-eyebrow">Workspace</span>
           {navigation.map((item) => {
             const Icon = item.icon;
-            const active =
-              item.href === "/app"
-                ? pathname === item.href
-                : pathname.startsWith(item.href);
-
             return (
               <Link
-                className={active ? "nav-link active" : "nav-link"}
+                className={item.active ? "nav-link active" : "nav-link"}
                 href={item.href}
                 key={item.href}
               >
