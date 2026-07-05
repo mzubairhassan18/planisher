@@ -1,0 +1,12 @@
+.next/
+node_modules/
+.pnpm-store/
+out/
+coverage/
+*.log
+*.tsbuildinfo
+.eslintcache
+.env*
+!.env.example
+.DS_Store
+Thumbs.db

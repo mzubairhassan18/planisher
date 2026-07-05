@@ -1,0 +1,9 @@
+packages:
+  - "."
+
+confirmModulesPurge: false
+packageImportMethod: clone-or-copy
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
