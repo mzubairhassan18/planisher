@@ -22,10 +22,10 @@ import type {
 } from "@/lib/types";
 
 type DialogState =
-  | { type: "new-project" }
+  | { type: "new-project"; templateId?: string }
   | { type: "new-task"; projectId: string }
   | { type: "task"; projectId: string; taskId: string }
-  | { type: "new-template" }
+  | { type: "new-template"; sourceProjectId?: string }
   | null;
 
 interface CreateProjectInput {
@@ -36,6 +36,7 @@ interface CreateProjectInput {
   startDate: string;
   endDate: string;
   budgetMinor: number;
+  templateId?: string;
 }
 
 interface CreateTaskInput {
@@ -59,18 +60,34 @@ interface LocalStoreValue {
   activity: ActivityItem[];
   dialog: DialogState;
   closeDialog: () => void;
-  openNewProject: () => void;
+  openNewProject: (templateId?: string) => void;
   openNewTask: (projectId: string) => void;
   openTask: (projectId: string, taskId: string) => void;
-  openNewTemplate: () => void;
+  openNewTemplate: (sourceProjectId?: string) => void;
   createProject: (input: CreateProjectInput) => string;
+  duplicateProject: (projectId: string) => string;
   addTask: (projectId: string, input: CreateTaskInput) => string;
   updateTask: (
     projectId: string,
     taskId: string,
-    patch: Partial<Pick<ProjectTask, "progress" | "title" | "startDate" | "endDate">>,
+    patch: Partial<
+      Pick<
+        ProjectTask,
+        | "progress"
+        | "title"
+        | "description"
+        | "startDate"
+        | "endDate"
+        | "assigneeIds"
+      >
+    >,
   ) => void;
-  addComment: (projectId: string, taskId: string, body: string) => void;
+  addComment: (
+    projectId: string,
+    taskId: string,
+    body: string,
+    kind?: TaskComment["kind"],
+  ) => void;
   addFile: (projectId: string, file: File) => void;
   createTemplate: (input: CreateTemplateInput) => string;
 }
@@ -85,9 +102,32 @@ function cloneSeedProjects() {
   return structuredClone(seededProjects);
 }
 
+function cloneSeedTemplates(): ProjectTemplate[] {
+  const source = seededProjects[0];
+  return [
+    {
+      id: "template-two-storey-home",
+      name: "Two-storey home baseline",
+      sourceProjectId: source.id,
+      description:
+        "A reusable residential sequence from site preparation through structural frame.",
+      tasks: source.tasks.map((task) => ({ ...structuredClone(task), progress: 0 })),
+      dependencies: structuredClone(source.dependencies),
+      createdAt: "2026-07-01T08:00:00.000Z",
+    },
+  ];
+}
+
+function shiftDate(date: string, offsetDays: number) {
+  const shifted = new Date(`${date}T12:00:00.000Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + offsetDays);
+  return shifted.toISOString().slice(0, 10);
+}
+
 export function LocalStoreProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(cloneSeedProjects);
-  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
+  const [templates, setTemplates] =
+    useState<ProjectTemplate[]>(cloneSeedTemplates);
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [files, setFiles] = useState<ProjectFile[]>([
     {
@@ -112,10 +152,9 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
   const [dialog, setDialog] = useState<DialogState>(null);
 
   const closeDialog = useCallback(() => setDialog(null), []);
-  const openNewProject = useCallback(
-    () => setDialog({ type: "new-project" }),
-    [],
-  );
+  const openNewProject = useCallback((templateId?: string) => {
+    setDialog({ type: "new-project", templateId });
+  }, []);
   const openNewTask = useCallback(
     (projectId: string) => setDialog({ type: "new-task", projectId }),
     [],
@@ -125,43 +164,140 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       setDialog({ type: "task", projectId, taskId }),
     [],
   );
-  const openNewTemplate = useCallback(
-    () => setDialog({ type: "new-template" }),
-    [],
+  const openNewTemplate = useCallback((sourceProjectId?: string) => {
+    setDialog({ type: "new-template", sourceProjectId });
+  }, []);
+
+  const createProject = useCallback(
+    (input: CreateProjectInput) => {
+      const id = makeId("project");
+      const template = input.templateId
+        ? templates.find((item) => item.id === input.templateId)
+        : undefined;
+      const taskIdMap = new Map<string, string>();
+      template?.tasks.forEach((task) => taskIdMap.set(task.id, makeId("task")));
+      const templateStart = template?.tasks
+        .map((task) => task.startDate)
+        .sort()[0];
+      const offsetDays = templateStart
+        ? Math.round(
+            (new Date(`${input.startDate}T12:00:00.000Z`).getTime() -
+              new Date(`${templateStart}T12:00:00.000Z`).getTime()) /
+              86_400_000,
+          )
+        : 0;
+      const tasks: ProjectTask[] =
+        template?.tasks.map((task) => ({
+          ...structuredClone(task),
+          id: taskIdMap.get(task.id) ?? makeId("task"),
+          projectId: id,
+          parentId: task.parentId
+            ? taskIdMap.get(task.parentId)
+            : undefined,
+          startDate: shiftDate(task.startDate, offsetDays),
+          endDate: shiftDate(task.endDate, offsetDays),
+          progress: 0,
+        })) ?? [];
+      const dependencies =
+        template?.dependencies.map((dependency) => ({
+          ...structuredClone(dependency),
+          id: makeId("dependency"),
+          sourceTaskId:
+            taskIdMap.get(dependency.sourceTaskId) ??
+            dependency.sourceTaskId,
+          targetTaskId:
+            taskIdMap.get(dependency.targetTaskId) ??
+            dependency.targetTaskId,
+        })) ?? [];
+      const teamIds = Array.from(
+        new Set(["member-1", ...tasks.flatMap((task) => task.assigneeIds)]),
+      );
+      const project: Project = {
+        id,
+        code: input.code.toUpperCase(),
+        name: input.name,
+        location: input.location,
+        description: input.description || template?.description || "",
+        startDate: input.startDate,
+        endDate: input.endDate,
+        budgetMinor: input.budgetMinor,
+        spentMinor: 0,
+        teamIds,
+        tasks,
+        dependencies,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setProjects((current) => [project, ...current]);
+      setActivity((current) => [
+        {
+          id: makeId("activity"),
+          projectId: id,
+          actorId: "member-1",
+          action: "created a project",
+          detail: template
+            ? `${input.name} reused ${template.tasks.length} tasks from ${template.name}.`
+            : `${input.name} was added to the local workspace.`,
+          occurredAt: new Date().toISOString(),
+        },
+        ...current,
+      ]);
+      return id;
+    },
+    [templates],
   );
 
-  const createProject = useCallback((input: CreateProjectInput) => {
-    const id = makeId("project");
-    const project: Project = {
-      id,
-      code: input.code.toUpperCase(),
-      name: input.name,
-      location: input.location,
-      description: input.description,
-      startDate: input.startDate,
-      endDate: input.endDate,
-      budgetMinor: input.budgetMinor,
-      spentMinor: 0,
-      teamIds: ["member-1"],
-      tasks: [],
-      dependencies: [],
-      updatedAt: new Date().toISOString(),
-    };
-
-    setProjects((current) => [project, ...current]);
-    setActivity((current) => [
-      {
-        id: makeId("activity"),
-        projectId: id,
-        actorId: "member-1",
-        action: "created a project",
-        detail: `${input.name} was added to the local workspace.`,
-        occurredAt: new Date().toISOString(),
-      },
-      ...current,
-    ]);
-    return id;
-  }, []);
+  const duplicateProject = useCallback(
+    (projectId: string) => {
+      const source = projects.find((project) => project.id === projectId);
+      if (!source) throw new Error("Source project was not found.");
+      const id = makeId("project");
+      const taskIdMap = new Map(
+        source.tasks.map((task) => [task.id, makeId("task")]),
+      );
+      const copy: Project = {
+        ...structuredClone(source),
+        id,
+        code: `${source.code}-COPY`,
+        name: `${source.name} Copy`,
+        tasks: source.tasks.map((task) => ({
+          ...structuredClone(task),
+          id: taskIdMap.get(task.id) ?? makeId("task"),
+          projectId: id,
+          parentId: task.parentId
+            ? taskIdMap.get(task.parentId)
+            : undefined,
+          progress: 0,
+        })),
+        dependencies: source.dependencies.map((dependency) => ({
+          ...structuredClone(dependency),
+          id: makeId("dependency"),
+          sourceTaskId:
+            taskIdMap.get(dependency.sourceTaskId) ??
+            dependency.sourceTaskId,
+          targetTaskId:
+            taskIdMap.get(dependency.targetTaskId) ??
+            dependency.targetTaskId,
+        })),
+        spentMinor: 0,
+        updatedAt: new Date().toISOString(),
+      };
+      setProjects((current) => [copy, ...current]);
+      setActivity((current) => [
+        {
+          id: makeId("activity"),
+          projectId: id,
+          actorId: "member-1",
+          action: "duplicated a project",
+          detail: `${copy.name} was copied from ${source.name} with progress reset.`,
+          occurredAt: new Date().toISOString(),
+        },
+        ...current,
+      ]);
+      return id;
+    },
+    [projects],
+  );
 
   const addTask = useCallback(
     (projectId: string, input: CreateTaskInput) => {
@@ -212,7 +348,15 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       projectId: string,
       taskId: string,
       patch: Partial<
-        Pick<ProjectTask, "progress" | "title" | "startDate" | "endDate">
+        Pick<
+          ProjectTask,
+          | "progress"
+          | "title"
+          | "description"
+          | "startDate"
+          | "endDate"
+          | "assigneeIds"
+        >
       >,
     ) => {
       let taskTitle = "Task";
@@ -255,7 +399,12 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
   );
 
   const addComment = useCallback(
-    (projectId: string, taskId: string, body: string) => {
+    (
+      projectId: string,
+      taskId: string,
+      body: string,
+      kind: TaskComment["kind"] = "comment",
+    ) => {
       const normalizedBody = body.trim();
       if (!normalizedBody) return;
 
@@ -264,6 +413,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         projectId,
         taskId,
         authorId: "member-1",
+        kind,
         body: normalizedBody,
         createdAt: new Date().toISOString(),
       };
@@ -274,7 +424,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
           id: makeId("activity"),
           projectId,
           actorId: "member-1",
-          action: "added a comment",
+          action: kind === "issue" ? "raised a problem" : "added a comment",
           detail: normalizedBody,
           occurredAt: comment.createdAt,
         },
@@ -358,6 +508,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       openTask,
       openNewTemplate,
       createProject,
+      duplicateProject,
       addTask,
       updateTask,
       addComment,
@@ -377,6 +528,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       openTask,
       openNewTemplate,
       createProject,
+      duplicateProject,
       addTask,
       updateTask,
       addComment,

@@ -12,7 +12,11 @@ export function NewProjectButton({
   const { openNewProject } = useLocalStore();
 
   return (
-    <button className={className} onClick={openNewProject} type="button">
+    <button
+      className={className}
+      onClick={() => openNewProject()}
+      type="button"
+    >
       <Plus aria-hidden="true" size={17} />
       New project
     </button>
@@ -44,7 +48,11 @@ export function NewTemplateButton() {
   const { openNewTemplate } = useLocalStore();
 
   return (
-    <button className="primary-button" onClick={openNewTemplate} type="button">
+    <button
+      className="primary-button"
+      onClick={() => openNewTemplate()}
+      type="button"
+    >
       <CopyPlus aria-hidden="true" size={17} />
       Create template
     </button>

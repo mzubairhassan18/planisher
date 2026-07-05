@@ -1,12 +1,12 @@
 "use client";
 
-import { CalendarRange, Library } from "lucide-react";
+import { CalendarRange, Library, Play } from "lucide-react";
 
 import { NewTemplateButton } from "@/components/action-buttons";
 import { useLocalStore } from "@/components/local-store";
 
 export default function TemplatesPage() {
-  const { projects, templates } = useLocalStore();
+  const { openNewProject, projects, templates } = useLocalStore();
 
   return (
     <div>
@@ -46,6 +46,14 @@ export default function TemplatesPage() {
                     <dd>{source?.name ?? "Project"}</dd>
                   </div>
                 </dl>
+                <button
+                  className="secondary-button template-use-button"
+                  onClick={() => openNewProject(template.id)}
+                  type="button"
+                >
+                  <Play aria-hidden="true" size={15} />
+                  Use this template
+                </button>
               </article>
             );
           })}

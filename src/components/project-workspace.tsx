@@ -1,9 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import {
+  Copy,
+  LayoutDashboard,
+  Library,
+  MoreHorizontal,
+} from "lucide-react";
 
 import { AvatarStack } from "@/components/avatar-stack";
+import { useLocalStore } from "@/components/local-store";
 import { StatusBadge } from "@/components/status-badge";
 import { localToday, team } from "@/lib/mock-data";
 import {
@@ -33,6 +41,9 @@ export function ProjectWorkspace({
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { duplicateProject, openNewTemplate } = useLocalStore();
+  const [menuOpen, setMenuOpen] = useState(false);
   const progress = calculateProjectProgress(project.tasks);
   const status = getProjectScheduleStatus(project, localToday);
   const members = team.filter((member) => project.teamIds.includes(member.id));
@@ -65,13 +76,54 @@ export function ProjectWorkspace({
           </div>
           <AvatarStack members={members} limit={4} />
           {actions}
-          <button
-            aria-label="More project actions"
-            className="icon-button"
-            type="button"
-          >
-            <MoreHorizontal aria-hidden="true" size={18} />
-          </button>
+          <div className="project-action-menu-wrap">
+            <button
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label="More project actions"
+              className="icon-button"
+              onClick={() => setMenuOpen((open) => !open)}
+              type="button"
+            >
+              <MoreHorizontal aria-hidden="true" size={18} />
+            </button>
+            {menuOpen ? (
+              <div className="project-action-menu" role="menu">
+                <span className="workspace-menu-label">Project actions</span>
+                <Link
+                  href={`/app/projects/${project.id}/overview`}
+                  onClick={() => setMenuOpen(false)}
+                  role="menuitem"
+                >
+                  <LayoutDashboard aria-hidden="true" size={15} />
+                  Open overview
+                </Link>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    openNewTemplate(project.id);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Library aria-hidden="true" size={15} />
+                  Save as template
+                </button>
+                <button
+                  onClick={() => {
+                    const projectId = duplicateProject(project.id);
+                    setMenuOpen(false);
+                    router.push(`/app/projects/${projectId}/overview`);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Copy aria-hidden="true" size={15} />
+                  Duplicate project
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 

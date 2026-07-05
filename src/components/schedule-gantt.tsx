@@ -11,12 +11,16 @@ type ViewMode = "day" | "week" | "month";
 export function ScheduleGantt({
   project,
   today,
+  focusTaskId,
+  issueTaskIds,
   onAddTask,
   onSelectTask,
   onUpdateProgress,
 }: {
   project: Project;
   today: Date;
+  focusTaskId?: string;
+  issueTaskIds: Set<string>;
   onAddTask: () => void;
   onSelectTask: (taskId: string) => void;
   onUpdateProgress: (taskId: string, progress: number) => void;
@@ -124,13 +128,47 @@ export function ScheduleGantt({
 
       gantt.templates.task_class = (_start, _end, ganttTask) => {
         const status = (
-          ganttTask as typeof ganttTask & { scheduleStatus?: string }
+          ganttTask as typeof ganttTask & {
+            scheduleStatus?: string;
+            hasOpenIssue?: boolean;
+            isFocused?: boolean;
+          }
         ).scheduleStatus;
-        return status ? `gantt-status-${status}` : "";
+        const classes = status ? [`gantt-status-${status}`] : [];
+        if (
+          (ganttTask as typeof ganttTask & { hasOpenIssue?: boolean })
+            .hasOpenIssue
+        ) {
+          classes.push("gantt-has-issue");
+        }
+        if (
+          (ganttTask as typeof ganttTask & { isFocused?: boolean }).isFocused
+        ) {
+          classes.push("gantt-focus-task");
+        }
+        return classes.join(" ");
       };
 
-      gantt.templates.progress_text = (_start, _end, ganttTask) =>
-        `${Math.round((ganttTask.progress ?? 0) * 100)}%`;
+      gantt.templates.progress_text = () => "";
+      gantt.templates.rightside_text = (_start, _end, ganttTask) => {
+        const taskMeta = ganttTask as typeof ganttTask & {
+          hasOpenIssue?: boolean;
+        };
+        const issueFlag = taskMeta.hasOpenIssue
+          ? '<span class="gantt-issue-flag" title="Problem raised">⚑</span>'
+          : "";
+        return `<span class="gantt-task-meta">${issueFlag}<strong>${Math.round(
+          (ganttTask.progress ?? 0) * 100,
+        )}%</strong></span>`;
+      };
+      gantt.templates.grid_row_class = (_start, _end, ganttTask) =>
+        (ganttTask as typeof ganttTask & { isFocused?: boolean }).isFocused
+          ? "gantt-focus-row"
+          : "";
+      gantt.templates.task_row_class = (_start, _end, ganttTask) =>
+        (ganttTask as typeof ganttTask & { isFocused?: boolean }).isFocused
+          ? "gantt-focus-row"
+          : "";
 
       const taskClickEvent = gantt.attachEvent(
         "onTaskClick",
@@ -166,6 +204,8 @@ export function ScheduleGantt({
                 ? "milestone"
                 : "task",
           scheduleStatus: getTaskScheduleStatus(task, today),
+          hasOpenIssue: issueTaskIds.has(task.id),
+          isFocused: task.id === focusTaskId,
         })),
         links: project.dependencies
           .filter(
@@ -181,7 +221,14 @@ export function ScheduleGantt({
           })),
       });
 
-      gantt.showDate(today);
+      if (
+        focusTaskId &&
+        visibleTasks.some((task) => task.id === focusTaskId)
+      ) {
+        gantt.showTask(focusTaskId);
+      } else {
+        gantt.showDate(today);
+      }
       setLoading(false);
 
       return () => {
@@ -202,6 +249,8 @@ export function ScheduleGantt({
       ganttRef.current = null;
     };
   }, [
+    focusTaskId,
+    issueTaskIds,
     onSelectTask,
     onUpdateProgress,
     project.dependencies,

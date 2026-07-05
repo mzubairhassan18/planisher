@@ -117,7 +117,7 @@ export default function DashboardPage() {
             .map(({ project, task }) => (
               <Link
                 className="attention-row"
-                href={`/app/projects/${project.id}/schedule`}
+                href={`/app/projects/${project.id}/schedule?task=${encodeURIComponent(task.id)}`}
                 key={task.id}
               >
                 <span className="attention-dot" />

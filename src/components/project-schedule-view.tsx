@@ -8,8 +8,15 @@ import { ProjectWorkspace } from "@/components/project-workspace";
 import { ScheduleGantt } from "@/components/schedule-gantt";
 import { localToday } from "@/lib/mock-data";
 
-export function ProjectScheduleView({ projectId }: { projectId: string }) {
-  const { openNewTask, openTask, projects, updateTask } = useLocalStore();
+export function ProjectScheduleView({
+  projectId,
+  focusTaskId,
+}: {
+  projectId: string;
+  focusTaskId?: string;
+}) {
+  const { comments, openNewTask, openTask, projects, updateTask } =
+    useLocalStore();
   const project = projects.find((item) => item.id === projectId);
 
   if (!project) {
@@ -45,6 +52,18 @@ export function ProjectScheduleView({ projectId }: { projectId: string }) {
       </div>
 
       <ScheduleGantt
+        focusTaskId={focusTaskId}
+        issueTaskIds={
+          new Set(
+            comments
+              .filter(
+                (comment) =>
+                  comment.projectId === project.id &&
+                  comment.kind === "issue",
+              )
+              .map((comment) => comment.taskId),
+          )
+        }
         onAddTask={() => openNewTask(project.id)}
         onSelectTask={(taskId) => openTask(project.id, taskId)}
         onUpdateProgress={(taskId, progress) =>

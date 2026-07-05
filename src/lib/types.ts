@@ -66,6 +66,7 @@ export interface TaskComment {
   projectId: string;
   taskId: string;
   authorId: string;
+  kind: "comment" | "issue";
   body: string;
   createdAt: string;
 }

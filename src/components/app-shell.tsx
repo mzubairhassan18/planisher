@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   CalendarRange,
@@ -14,17 +14,54 @@ import {
   Search,
   Settings,
   Sparkles,
+  UserRound,
 } from "lucide-react";
 
-import { LocaleSummary } from "@/components/locale-summary";
 import { NewProjectButton } from "@/components/action-buttons";
+import { LocaleSummary } from "@/components/locale-summary";
 import { useLocalStore } from "@/components/local-store";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { projects } = useLocalStore();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const primaryProjectId = projects[0]?.id ?? "riverside-villa";
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+
+    const projectResults = projects
+      .filter((project) =>
+        [project.name, project.code, project.location].some((value) =>
+          value.toLowerCase().includes(query),
+        ),
+      )
+      .map((project) => ({
+        key: `project-${project.id}`,
+        type: "Project",
+        label: project.name,
+        detail: `${project.code} · ${project.location}`,
+        href: `/app/projects/${project.id}/overview`,
+      }));
+    const taskResults = projects.flatMap((project) =>
+      project.tasks
+        .filter((task) => task.title.toLowerCase().includes(query))
+        .map((task) => ({
+          key: `task-${task.id}`,
+          type: "Task",
+          label: task.title,
+          detail: `${project.name} · ${task.progress}%`,
+          href: `/app/projects/${project.id}/schedule?task=${encodeURIComponent(task.id)}`,
+        })),
+    );
+
+    return [...projectResults, ...taskResults].slice(0, 8);
+  }, [projects, searchQuery]);
   const navigation = [
     {
       href: "/app",
@@ -60,6 +97,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       active: pathname === "/app/templates",
     },
   ];
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchOpen(true);
+      }
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setUserMenuOpen(false);
+        setSwitcherOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  function openSearchResult(href: string) {
+    setSearchQuery("");
+    setSearchOpen(false);
+    router.push(href);
+  }
 
   return (
     <div className="app-frame">
@@ -158,15 +218,103 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="app-main">
         <header className="topbar">
-          <label className="global-search">
-            <Search aria-hidden="true" size={17} />
-            <span className="sr-only">Search Planisher</span>
-            <input placeholder="Search projects and tasks…" />
-            <kbd>⌘ K</kbd>
-          </label>
+          <div className="global-search-wrap">
+            <label className="global-search">
+              <Search aria-hidden="true" size={17} />
+              <span className="sr-only">Search Planisher</span>
+              <input
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setSearchOpen(true);
+                }}
+                onFocus={() => setSearchOpen(true)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && searchResults[0]) {
+                    event.preventDefault();
+                    openSearchResult(searchResults[0].href);
+                  }
+                }}
+                placeholder="Search projects and tasks…"
+                ref={searchInputRef}
+                value={searchQuery}
+              />
+              <kbd>Ctrl K</kbd>
+            </label>
+            {searchOpen && searchQuery.trim() ? (
+              <div
+                aria-label="Search results"
+                className="global-search-results"
+                role="listbox"
+              >
+                {searchResults.length ? (
+                  searchResults.map((result) => (
+                    <button
+                      aria-selected="false"
+                      key={result.key}
+                      onClick={() => openSearchResult(result.href)}
+                      role="option"
+                      type="button"
+                    >
+                      <span className="search-result-type">{result.type}</span>
+                      <span>
+                        <strong>{result.label}</strong>
+                        <small>{result.detail}</small>
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p>No matching projects or tasks.</p>
+                )}
+              </div>
+            ) : null}
+          </div>
           <LocaleSummary />
-          <div className="topbar-avatar" aria-label="Local demo user">
-            AK
+          <div className="topbar-user">
+            <button
+              aria-expanded={userMenuOpen}
+              aria-haspopup="menu"
+              className="topbar-user-button"
+              onClick={() => setUserMenuOpen((open) => !open)}
+              type="button"
+            >
+              <span className="topbar-avatar" aria-hidden="true">
+                AK
+              </span>
+              <span className="topbar-user-copy">
+                <strong>Amina Khan</strong>
+                <small>Project lead</small>
+              </span>
+              <ChevronDown
+                aria-hidden="true"
+                className={userMenuOpen ? "chevron-open" : ""}
+                size={15}
+              />
+            </button>
+            {userMenuOpen ? (
+              <div className="topbar-user-menu" role="menu">
+                <span className="workspace-menu-label">Local demo account</span>
+                <Link
+                  href="/app"
+                  onClick={() => setUserMenuOpen(false)}
+                  role="menuitem"
+                >
+                  <LayoutDashboard aria-hidden="true" size={15} />
+                  My dashboard
+                </Link>
+                <Link
+                  href="/app/settings/local"
+                  onClick={() => setUserMenuOpen(false)}
+                  role="menuitem"
+                >
+                  <UserRound aria-hidden="true" size={15} />
+                  Profile and preferences
+                </Link>
+                <div className="local-session-note">
+                  <Sparkles aria-hidden="true" size={14} />
+                  Signed in locally · no login required
+                </div>
+              </div>
+            ) : null}
           </div>
         </header>
         <main className="page-content">{children}</main>
