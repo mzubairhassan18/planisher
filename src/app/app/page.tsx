@@ -22,7 +22,7 @@ import {
 } from "@/lib/progress";
 
 export default function DashboardPage() {
-  const { activity, projects } = useLocalStore();
+  const { activity, openActivity, projects } = useLocalStore();
   const activeTasks = projects.flatMap((project) =>
     getLeafTasks(project.tasks),
   );
@@ -146,7 +146,12 @@ export default function DashboardPage() {
             );
 
             return (
-              <div className="activity-row" key={item.id}>
+              <button
+                className="activity-row"
+                key={item.id}
+                onClick={() => openActivity(item.id)}
+                type="button"
+              >
                 <span
                   className="avatar"
                   style={{ backgroundColor: member?.color }}
@@ -160,7 +165,12 @@ export default function DashboardPage() {
                   <small>{item.detail}</small>
                   <em>{project?.name} · recently</em>
                 </span>
-              </div>
+                <ArrowRight
+                  aria-hidden="true"
+                  className="activity-row-arrow"
+                  size={15}
+                />
+              </button>
             );
           })}
         </article>

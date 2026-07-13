@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Library,
   MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 
 import { AvatarStack } from "@/components/avatar-stack";
@@ -42,7 +43,11 @@ export function ProjectWorkspace({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { duplicateProject, openNewTemplate } = useLocalStore();
+  const {
+    duplicateProject,
+    openDeleteProject,
+    openNewTemplate,
+  } = useLocalStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const progress = calculateProjectProgress(project.tasks);
   const status = getProjectScheduleStatus(project, localToday);
@@ -120,6 +125,18 @@ export function ProjectWorkspace({
                 >
                   <Copy aria-hidden="true" size={15} />
                   Duplicate project
+                </button>
+                <button
+                  className="danger-menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    openDeleteProject(project.id);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  <Trash2 aria-hidden="true" size={15} />
+                  Delete project
                 </button>
               </div>
             ) : null}

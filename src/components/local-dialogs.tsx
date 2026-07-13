@@ -4,15 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  ArrowRight,
+  Banknote,
   CalendarDays,
+  FolderKanban,
+  Image as ImageIcon,
   MessageSquare,
+  Mic,
+  Paperclip,
+  Receipt,
   Save,
+  Trash2,
   UserRound,
+  Video,
   X,
 } from "lucide-react";
 
 import { useLocalStore } from "@/components/local-store";
-import { team } from "@/lib/mock-data";
+import { getMember, team } from "@/lib/mock-data";
 import { getTaskScheduleStatus } from "@/lib/progress";
 
 function DialogFrame({
@@ -336,15 +345,421 @@ function NewTemplateDialog() {
   );
 }
 
-function TaskDrawer({
+function DeleteProjectDialog({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const { closeDialog, deleteProject, projects } = useLocalStore();
+  const project = projects.find((item) => item.id === projectId);
+  if (!project) return null;
+
+  return (
+    <DialogFrame
+      title="Delete project?"
+      description="This removes the project, tasks, comments, files, and cost records from this local session."
+    >
+      <div className="delete-project-content">
+        <div className="danger-callout">
+          <Trash2 aria-hidden="true" size={18} />
+          <span>
+            <strong>{project.name}</strong>
+            This cannot be undone after the local project is deleted.
+          </span>
+        </div>
+        <footer className="dialog-actions">
+          <button
+            className="secondary-button"
+            onClick={closeDialog}
+            type="button"
+          >
+            Keep project
+          </button>
+          <button
+            className="danger-button"
+            onClick={() => {
+              deleteProject(project.id);
+              router.push("/app/projects");
+            }}
+            type="button"
+          >
+            <Trash2 aria-hidden="true" size={15} />
+            Delete project
+          </button>
+        </footer>
+      </div>
+    </DialogFrame>
+  );
+}
+
+function BudgetLineDialog({
   projectId,
   taskId,
 }: {
   projectId: string;
-  taskId: string;
+  taskId?: string;
 }) {
-  const { addComment, closeDialog, comments, projects, updateTask } =
-    useLocalStore();
+  const { addBudgetLine, closeDialog, openTask, projects } = useLocalStore();
+  const project = projects.find((item) => item.id === projectId);
+  const task = project?.tasks.find((item) => item.id === taskId);
+  if (!project) return null;
+
+  return (
+    <DialogFrame
+      title={task ? `Add budget for ${task.title}` : "Add budget line"}
+      description="Planned amounts are stored separately from commitments and actual expenses."
+    >
+      <form
+        className="dialog-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          const linkedTaskId = String(data.get("taskId") || "") || undefined;
+          addBudgetLine({
+            projectId,
+            taskId: linkedTaskId,
+            category: String(data.get("category")),
+            description: String(data.get("description")),
+            plannedMinor: Math.round(
+              Number(data.get("plannedAmount") || 0) * 100,
+            ),
+          });
+          closeDialog();
+          if (linkedTaskId) openTask(projectId, linkedTaskId);
+        }}
+      >
+        <div className="form-grid two-columns">
+          <Field label="Category">
+            <select name="category" required>
+              <option>Materials</option>
+              <option>Labour</option>
+              <option>Subcontract</option>
+              <option>Equipment</option>
+              <option>Permits</option>
+              <option>Other</option>
+            </select>
+          </Field>
+          <Field label="Linked task">
+            <select defaultValue={taskId ?? ""} name="taskId">
+              <option value="">Project-level budget</option>
+              {project.tasks
+                .filter((item) => item.type !== "summary")
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        </div>
+        <Field label="Description">
+          <input
+            autoFocus
+            name="description"
+            placeholder="Window package supply"
+            required
+          />
+        </Field>
+        <Field label="Planned amount">
+          <input
+            min="0"
+            name="plannedAmount"
+            placeholder="0"
+            required
+            step="0.01"
+            type="number"
+          />
+        </Field>
+        <footer className="dialog-actions">
+          <button
+            className="secondary-button"
+            onClick={closeDialog}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button className="primary-button" type="submit">
+            Add budget
+          </button>
+        </footer>
+      </form>
+    </DialogFrame>
+  );
+}
+
+function CostEntryDialog({
+  projectId,
+  taskId,
+}: {
+  projectId: string;
+  taskId?: string;
+}) {
+  const {
+    addCostEntry,
+    budgetLines,
+    closeDialog,
+    openTask,
+    projects,
+  } = useLocalStore();
+  const project = projects.find((item) => item.id === projectId);
+  const task = project?.tasks.find((item) => item.id === taskId);
+  const projectBudgetLines = budgetLines.filter(
+    (line) => line.projectId === projectId,
+  );
+  const defaultBudgetLineId =
+    projectBudgetLines.find((line) => line.taskId === taskId)?.id ?? "";
+  if (!project) return null;
+
+  return (
+    <DialogFrame
+      title={task ? `Add expense for ${task.title}` : "Record project cost"}
+      description="Record a commitment before purchase or an actual expense after it is incurred."
+    >
+      <form
+        className="dialog-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          const linkedTaskId = String(data.get("taskId") || "") || undefined;
+          addCostEntry({
+            projectId,
+            taskId: linkedTaskId,
+            budgetLineId:
+              String(data.get("budgetLineId") || "") || undefined,
+            type: String(data.get("type")) as "commitment" | "actual",
+            description: String(data.get("description")),
+            vendor: String(data.get("vendor")),
+            amountMinor: Math.round(
+              Number(data.get("amount") || 0) * 100,
+            ),
+            occurredOn: String(data.get("occurredOn")),
+          });
+          closeDialog();
+          if (linkedTaskId) openTask(projectId, linkedTaskId);
+        }}
+      >
+        <div className="form-grid two-columns">
+          <Field label="Entry type">
+            <select defaultValue="actual" name="type">
+              <option value="actual">Actual expense</option>
+              <option value="commitment">Commitment</option>
+            </select>
+          </Field>
+          <Field label="Date">
+            <input
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              name="occurredOn"
+              required
+              type="date"
+            />
+          </Field>
+        </div>
+        <Field label="Linked task">
+          <select defaultValue={taskId ?? ""} name="taskId">
+            <option value="">Project-level cost</option>
+            {project.tasks
+              .filter((item) => item.type !== "summary")
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+          </select>
+        </Field>
+        <Field label="Budget line">
+          <select defaultValue={defaultBudgetLineId} name="budgetLineId">
+            <option value="">Not linked to a budget line</option>
+            {projectBudgetLines.map((line) => (
+              <option key={line.id} value={line.id}>
+                {line.category} · {line.description}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div className="form-grid two-columns">
+          <Field label="Description">
+            <input
+              autoFocus
+              name="description"
+              placeholder="Concrete delivery"
+              required
+            />
+          </Field>
+          <Field label="Vendor">
+            <input name="vendor" placeholder="Supplier or contractor" />
+          </Field>
+        </div>
+        <Field label="Amount">
+          <input
+            min="0"
+            name="amount"
+            placeholder="0"
+            required
+            step="0.01"
+            type="number"
+          />
+        </Field>
+        <footer className="dialog-actions">
+          <button
+            className="secondary-button"
+            onClick={closeDialog}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button className="primary-button" type="submit">
+            Record cost
+          </button>
+        </footer>
+      </form>
+    </DialogFrame>
+  );
+}
+
+function ActivityDrawer({ activityId }: { activityId: string }) {
+  const router = useRouter();
+  const { activity, closeDialog, projects } = useLocalStore();
+  const item = activity.find((candidate) => candidate.id === activityId);
+  const project = projects.find(
+    (candidate) => candidate.id === item?.projectId,
+  );
+  const task = project?.tasks.find(
+    (candidate) => candidate.id === item?.taskId,
+  );
+  if (!item || !project) return null;
+
+  const member = getMember(item.actorId);
+  const destination = item.taskId
+    ? `/app/projects/${project.id}/schedule?task=${encodeURIComponent(
+        item.taskId,
+      )}&open=1${
+        item.commentId
+          ? `&comment=${encodeURIComponent(item.commentId)}`
+          : ""
+      }`
+    : item.targetType === "budget"
+      ? `/app/projects/${project.id}/budget`
+      : item.targetType === "file"
+        ? `/app/projects/${project.id}/files`
+        : `/app/projects/${project.id}/overview`;
+  const destinationLabel = item.commentId
+    ? "Open task comments"
+    : item.taskId
+      ? "Open task"
+      : item.targetType === "budget"
+        ? "Open project budget"
+        : item.targetType === "file"
+          ? "Open project files"
+          : "Open project";
+
+  return (
+    <div
+      className="dialog-backdrop drawer-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) closeDialog();
+      }}
+    >
+      <aside
+        aria-label="Activity details"
+        aria-modal="true"
+        className="task-drawer activity-drawer"
+        role="dialog"
+      >
+        <header className="dialog-header">
+          <div>
+            <span className="drawer-status status-on_time">Activity</span>
+            <h2>{item.action}</h2>
+            <p>{new Date(item.occurredAt).toLocaleString()}</p>
+          </div>
+          <button
+            aria-label="Close activity details"
+            className="icon-button"
+            onClick={closeDialog}
+            type="button"
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
+        </header>
+        <div className="drawer-section activity-detail-person">
+          <span
+            className="avatar"
+            style={{ backgroundColor: member?.color }}
+          >
+            {member?.initials ?? "AK"}
+          </span>
+          <span>
+            <strong>{member?.name ?? "Local user"}</strong>
+            <small>{member?.role ?? "Workspace member"}</small>
+          </span>
+        </div>
+        <div className="drawer-section">
+          <span className="eyebrow">Recorded change</span>
+          <p className="activity-detail-copy">{item.detail}</p>
+          <dl className="activity-target-facts">
+            <div>
+              <dt>Project</dt>
+              <dd>{project.name}</dd>
+            </div>
+            {task ? (
+              <div>
+                <dt>Task</dt>
+                <dd>{task.title}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Destination</dt>
+              <dd>{item.targetType ?? "project"}</dd>
+            </div>
+          </dl>
+        </div>
+        <div className="drawer-section activity-navigation">
+          <button
+            className="primary-button"
+            onClick={() => {
+              closeDialog();
+              router.push(destination);
+            }}
+            type="button"
+          >
+            {destinationLabel}
+            <ArrowRight aria-hidden="true" size={15} />
+          </button>
+          {item.taskId ? (
+            <button
+              className="secondary-button"
+              onClick={() => {
+                closeDialog();
+                router.push(`/app/projects/${project.id}/overview`);
+              }}
+              type="button"
+            >
+              <FolderKanban aria-hidden="true" size={15} />
+              Project overview
+            </button>
+          ) : null}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function TaskDrawer({
+  projectId,
+  taskId,
+  focusCommentId,
+}: {
+  projectId: string;
+  taskId: string;
+  focusCommentId?: string;
+}) {
+  const {
+    addComment,
+    budgetLines,
+    closeDialog,
+    comments,
+    costEntries,
+    openBudgetLine,
+    openCostEntry,
+    projects,
+    updateTask,
+  } = useLocalStore();
   const project = projects.find((item) => item.id === projectId);
   const task = project?.tasks.find((item) => item.id === taskId);
   const [title, setTitle] = useState(task?.title ?? "");
@@ -357,6 +772,8 @@ function TaskDrawer({
   const [progress, setProgress] = useState(task?.progress ?? 0);
   const [commentKind, setCommentKind] =
     useState<"comment" | "issue">("comment");
+  const [commentBody, setCommentBody] = useState("");
+  const [selectedMedia, setSelectedMedia] = useState<File[]>([]);
   const [saved, setSaved] = useState(false);
   const taskComments = useMemo(
     () => comments.filter((comment) => comment.taskId === taskId),
@@ -365,6 +782,21 @@ function TaskDrawer({
   const issueCount = taskComments.filter(
     (comment) => comment.kind === "issue",
   ).length;
+  const taskBudgetLines = budgetLines.filter(
+    (line) => line.projectId === projectId && line.taskId === taskId,
+  );
+  const taskPlanned = taskBudgetLines.reduce(
+    (sum, line) => sum + line.plannedMinor,
+    0,
+  );
+  const taskActual = costEntries
+    .filter(
+      (entry) =>
+        entry.projectId === projectId &&
+        entry.taskId === taskId &&
+        entry.type === "actual",
+    )
+    .reduce((sum, entry) => sum + entry.amountMinor, 0);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -373,6 +805,13 @@ function TaskDrawer({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeDialog]);
+
+  useEffect(() => {
+    if (!focusCommentId) return;
+    document
+      .getElementById(`comment-${focusCommentId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusCommentId, taskComments]);
 
   if (!project || !task) return null;
 
@@ -537,9 +976,50 @@ function TaskDrawer({
           </Field>
           <button className="primary-button drawer-save" type="submit">
             <Save aria-hidden="true" size={15} />
-            {saved ? "Changes saved" : "Save task changes"}
+            {saved ? "Saved" : "Save"}
           </button>
         </form>
+
+        <div className="drawer-section task-cost-section">
+          <div className="drawer-section-title">
+            <Banknote aria-hidden="true" size={16} />
+            Task cost
+          </div>
+          <div className="task-cost-summary">
+            <span>
+              <small>Budget</small>
+              <strong>{(taskPlanned / 100).toLocaleString()}</strong>
+            </span>
+            <span>
+              <small>Expenses</small>
+              <strong>{(taskActual / 100).toLocaleString()}</strong>
+            </span>
+            <span>
+              <small>Remaining</small>
+              <strong>
+                {((taskPlanned - taskActual) / 100).toLocaleString()}
+              </strong>
+            </span>
+          </div>
+          <div className="task-cost-actions">
+            <button
+              className="secondary-button"
+              onClick={() => openBudgetLine(projectId, taskId)}
+              type="button"
+            >
+              <Banknote aria-hidden="true" size={15} />
+              Add budget
+            </button>
+            <button
+              className="secondary-button"
+              onClick={() => openCostEntry(projectId, taskId)}
+              type="button"
+            >
+              <Receipt aria-hidden="true" size={15} />
+              Add expense
+            </button>
+          </div>
+        </div>
 
         <div className="drawer-section comments-section">
           <div className="drawer-section-title">
@@ -558,11 +1038,14 @@ function TaskDrawer({
             {taskComments.length ? (
               taskComments.map((comment) => (
                 <article
-                  className={
-                    comment.kind === "issue"
-                      ? "comment issue-comment"
-                      : "comment"
-                  }
+                  className={[
+                    "comment",
+                    comment.kind === "issue" ? "issue-comment" : "",
+                    comment.id === focusCommentId ? "focused-comment" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  id={`comment-${comment.id}`}
                   key={comment.id}
                 >
                   <span className="avatar">AK</span>
@@ -576,7 +1059,39 @@ function TaskDrawer({
                         </em>
                       ) : null}
                     </strong>
-                    <p>{comment.body}</p>
+                    {comment.body ? <p>{comment.body}</p> : null}
+                    {(comment.attachments ?? []).length ? (
+                      <div className="comment-media-grid">
+                        {(comment.attachments ?? []).map((attachment) => (
+                          <figure key={attachment.id}>
+                            {attachment.type.startsWith("image/") ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                alt={attachment.name}
+                                src={attachment.url}
+                              />
+                            ) : null}
+                            {attachment.type.startsWith("video/") ? (
+                              <video controls preload="metadata">
+                                <source
+                                  src={attachment.url}
+                                  type={attachment.type}
+                                />
+                              </video>
+                            ) : null}
+                            {attachment.type.startsWith("audio/") ? (
+                              <audio controls preload="metadata">
+                                <source
+                                  src={attachment.url}
+                                  type={attachment.type}
+                                />
+                              </audio>
+                            ) : null}
+                            <figcaption>{attachment.name}</figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                    ) : null}
                     <small>Just now</small>
                   </div>
                 </article>
@@ -592,13 +1107,15 @@ function TaskDrawer({
             onSubmit={(event) => {
               event.preventDefault();
               const form = event.currentTarget;
-              const data = new FormData(form);
               addComment(
                 projectId,
                 taskId,
-                String(data.get("comment")),
+                commentBody,
                 commentKind,
+                selectedMedia,
               );
+              setCommentBody("");
+              setSelectedMedia([]);
               form.reset();
             }}
           >
@@ -626,6 +1143,35 @@ function TaskDrawer({
                 Raise a problem
               </button>
             </div>
+            <div className="comment-media-picker">
+              <label className="secondary-button compact">
+                <Paperclip aria-hidden="true" size={14} />
+                Add image, video, or audio
+                <input
+                  accept="image/*,video/*,audio/*"
+                  multiple
+                  onChange={(event) =>
+                    setSelectedMedia(Array.from(event.target.files ?? []))
+                  }
+                  type="file"
+                />
+              </label>
+              <span className="media-type-hints" aria-hidden="true">
+                <ImageIcon size={14} />
+                <Video size={14} />
+                <Mic size={14} />
+              </span>
+            </div>
+            {selectedMedia.length ? (
+              <div className="selected-media-list">
+                {selectedMedia.map((file) => (
+                  <span key={`${file.name}-${file.size}`}>
+                    {file.name}
+                    <small>{Math.ceil(file.size / 1000)} KB</small>
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <textarea
               aria-label={
                 commentKind === "issue"
@@ -633,15 +1179,20 @@ function TaskDrawer({
                   : "Add a comment"
               }
               name="comment"
+              onChange={(event) => setCommentBody(event.target.value)}
               placeholder={
                 commentKind === "issue"
                   ? "Describe what is blocked, damaged, missing, or needs a decision…"
                   : "Share a site update…"
               }
-              required
               rows={3}
+              value={commentBody}
             />
-            <button className="primary-button compact" type="submit">
+            <button
+              className="primary-button compact"
+              disabled={!commentBody.trim() && selectedMedia.length === 0}
+              type="submit"
+            >
               {commentKind === "issue" ? "Raise problem" : "Add comment"}
             </button>
           </form>
@@ -660,9 +1211,29 @@ export function LocalDialogs() {
     return <NewTaskDialog projectId={dialog.projectId} />;
   }
   if (dialog.type === "new-template") return <NewTemplateDialog />;
+  if (dialog.type === "delete-project") {
+    return <DeleteProjectDialog projectId={dialog.projectId} />;
+  }
+  if (dialog.type === "budget-line") {
+    return (
+      <BudgetLineDialog
+        projectId={dialog.projectId}
+        taskId={dialog.taskId}
+      />
+    );
+  }
+  if (dialog.type === "cost-entry") {
+    return (
+      <CostEntryDialog projectId={dialog.projectId} taskId={dialog.taskId} />
+    );
+  }
+  if (dialog.type === "activity") {
+    return <ActivityDrawer activityId={dialog.activityId} />;
+  }
   if (dialog.type === "task") {
     return (
       <TaskDrawer
+        focusCommentId={dialog.commentId}
         key={dialog.taskId}
         projectId={dialog.projectId}
         taskId={dialog.taskId}

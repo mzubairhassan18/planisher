@@ -4,12 +4,12 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarCheck2,
-  CircleDollarSign,
   File,
   FolderOpen,
   Upload,
 } from "lucide-react";
 
+import { BudgetWorkspace } from "@/components/budget-workspace";
 import { useLocalStore } from "@/components/local-store";
 import { MetricCard } from "@/components/metric-card";
 import { ProjectWorkspace } from "@/components/project-workspace";
@@ -22,10 +22,6 @@ import {
 } from "@/lib/progress";
 
 export type ProjectSection = "overview" | "budget" | "files" | "activity";
-
-function formatAmount(value: number) {
-  return (value / 100).toLocaleString();
-}
 
 function formatBytes(value: number) {
   if (value < 1_000_000) return `${Math.ceil(value / 1_000)} KB`;
@@ -58,7 +54,9 @@ export function ProjectSectionView({
       {section === "overview" ? (
         <ProjectOverview projectId={projectId} />
       ) : null}
-      {section === "budget" ? <ProjectBudget projectId={projectId} /> : null}
+      {section === "budget" ? (
+        <BudgetWorkspace projectId={projectId} />
+      ) : null}
       {section === "files" ? <ProjectFiles projectId={projectId} /> : null}
       {section === "activity" ? <ProjectActivity projectId={projectId} /> : null}
     </ProjectWorkspace>
@@ -139,48 +137,6 @@ function ProjectOverview({ projectId }: { projectId: string }) {
   );
 }
 
-function ProjectBudget({ projectId }: { projectId: string }) {
-  const { projects } = useLocalStore();
-  const project = projects.find((item) => item.id === projectId);
-  if (!project) return null;
-  const remaining = project.budgetMinor - project.spentMinor;
-
-  return (
-    <div className="project-section-content">
-      <section className="metric-grid project-metrics">
-        <MetricCard
-          icon={CircleDollarSign}
-          label="Planned"
-          note="Project budget"
-          tone="blue"
-          value={formatAmount(project.budgetMinor)}
-        />
-        <MetricCard
-          icon={CircleDollarSign}
-          label="Recorded spend"
-          note="Local cost entries"
-          value={formatAmount(project.spentMinor)}
-        />
-        <MetricCard
-          icon={CircleDollarSign}
-          label="Remaining"
-          note="Before forecast changes"
-          tone="green"
-          value={formatAmount(remaining)}
-        />
-      </section>
-      <article className="content-card section-card">
-        <span className="eyebrow">Cost control</span>
-        <h2>Budget detail</h2>
-        <p className="section-copy">
-          Budget-line editing is the next financial slice. This project route is
-          now live and already reflects the project totals in local memory.
-        </p>
-      </article>
-    </div>
-  );
-}
-
 function ProjectFiles({ projectId }: { projectId: string }) {
   const { addFile, files } = useLocalStore();
   const projectFiles = files.filter((file) => file.projectId === projectId);
@@ -235,7 +191,7 @@ function ProjectFiles({ projectId }: { projectId: string }) {
 }
 
 function ProjectActivity({ projectId }: { projectId: string }) {
-  const { activity } = useLocalStore();
+  const { activity, openActivity } = useLocalStore();
   const projectActivity = activity.filter(
     (item) => item.projectId === projectId,
   );
@@ -253,21 +209,26 @@ function ProjectActivity({ projectId }: { projectId: string }) {
           {projectActivity.map((item) => {
             const member = getMember(item.actorId);
             return (
-              <article key={item.id}>
+              <button
+                key={item.id}
+                onClick={() => openActivity(item.id)}
+                type="button"
+              >
                 <span
                   className="avatar"
                   style={{ backgroundColor: member?.color }}
                 >
                   {member?.initials ?? "AK"}
                 </span>
-                <div>
+                <span>
                   <strong>
                     {member?.name ?? "Local user"} {item.action}
                   </strong>
                   <p>{item.detail}</p>
                   <small>{new Date(item.occurredAt).toLocaleString()}</small>
-                </div>
-              </article>
+                </span>
+                <ArrowRight aria-hidden="true" size={15} />
+              </button>
             );
           })}
         </div>

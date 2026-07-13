@@ -61,6 +61,14 @@ export interface ProjectTemplate {
   createdAt: string;
 }
 
+export interface CommentAttachment {
+  id: string;
+  name: string;
+  type: string;
+  sizeBytes: number;
+  url: string;
+}
+
 export interface TaskComment {
   id: string;
   projectId: string;
@@ -68,6 +76,7 @@ export interface TaskComment {
   authorId: string;
   kind: "comment" | "issue";
   body: string;
+  attachments: CommentAttachment[];
   createdAt: string;
 }
 
@@ -86,7 +95,33 @@ export interface ActivityItem {
   actorId: string;
   action: string;
   detail: string;
+  targetType?: "project" | "task" | "comment" | "budget" | "file";
+  taskId?: string;
+  commentId?: string;
   occurredAt: string;
+}
+
+export interface BudgetLine {
+  id: string;
+  projectId: string;
+  taskId?: string;
+  category: string;
+  description: string;
+  plannedMinor: number;
+  createdAt: string;
+}
+
+export interface CostEntry {
+  id: string;
+  projectId: string;
+  taskId?: string;
+  budgetLineId?: string;
+  type: "commitment" | "actual";
+  description: string;
+  vendor: string;
+  amountMinor: number;
+  occurredOn: string;
+  createdAt: string;
 }
 
 export interface LocaleSettings {

@@ -327,6 +327,8 @@ Desktop uses a 440–520 px drawer so the schedule remains visible.
 - filters for task, category, variance, and entry type;
 - add/edit budget-line drawer;
 - cost-entry drawer;
+- task drawer shortcuts for “Add budget” and “Add expense” create the same
+  task-linked budget lines and cost entries used by the full budget workspace;
 - simple cumulative planned-vs-actual chart after the core table works;
 - export action reserved for a later entitlement.
 
@@ -1087,8 +1089,8 @@ Acceptance:
 - [ ] `P2-17` Build comment thread, composer, mentions UI, and edit indicator. `M`
 - [ ] `P2-18` Build attachment list/uploader with progress and failure states. `M`
 - [x] `P2-19` Build budget summary cards. `S`
-- [ ] `P2-20` Build budget-line table/grouping/filtering. `M`
-- [ ] `P2-21` Build budget-line and cost-entry drawers. `M`
+- [x] `P2-20` Build budget-line table/grouping/filtering. `M`
+- [x] `P2-21` Build budget-line and cost-entry drawers. `M`
 - [ ] `P2-22` Build planned-vs-actual chart with accessible data alternative. `S`
 - [ ] `P2-23` Build files page. `S`
 - [ ] `P2-24` Build audit feed, filters, and expandable details. `M`

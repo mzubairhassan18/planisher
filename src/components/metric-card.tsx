@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 export function MetricCard({
   label,
@@ -8,7 +9,7 @@ export function MetricCard({
   tone = "neutral",
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   note: string;
   icon: LucideIcon;
   tone?: "neutral" | "blue" | "red" | "green";

@@ -30,7 +30,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const primaryProjectId = projects[0]?.id ?? "riverside-villa";
+  const primaryProjectId = projects[0]?.id;
+  const scheduleHref = primaryProjectId
+    ? `/app/projects/${primaryProjectId}/schedule`
+    : "/app/projects";
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [];
@@ -79,7 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           !pathname.endsWith("/schedule")),
     },
     {
-      href: `/app/projects/${primaryProjectId}/schedule`,
+      href: scheduleHref,
       label: "Schedule",
       icon: CalendarRange,
       active: pathname.endsWith("/schedule"),

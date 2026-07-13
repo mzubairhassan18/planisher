@@ -5,9 +5,16 @@ export default async function ProjectSchedulePage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ task?: string }>;
+  searchParams: Promise<{ task?: string; open?: string; comment?: string }>;
 }) {
   const { projectId } = await params;
-  const { task } = await searchParams;
-  return <ProjectScheduleView focusTaskId={task} projectId={projectId} />;
+  const { task, open, comment } = await searchParams;
+  return (
+    <ProjectScheduleView
+      focusCommentId={comment}
+      focusTaskId={task}
+      openTaskOnLoad={open === "1"}
+      projectId={projectId}
+    />
+  );
 }

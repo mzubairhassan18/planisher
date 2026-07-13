@@ -315,6 +315,8 @@ export const activity: ActivityItem[] = [
     actorId: "member-2",
     action: "updated progress",
     detail: "Foundation walls moved from 60% to 72%.",
+    targetType: "task",
+    taskId: "rv-6",
     occurredAt: "2026-07-04T08:45:00.000Z",
   },
   {
@@ -323,6 +325,8 @@ export const activity: ActivityItem[] = [
     actorId: "member-1",
     action: "shifted a task",
     detail: "Block B services rough-in was extended by three days.",
+    targetType: "task",
+    taskId: "ct-2",
     occurredAt: "2026-07-03T14:20:00.000Z",
   },
   {
@@ -331,6 +335,7 @@ export const activity: ActivityItem[] = [
     actorId: "member-3",
     action: "recorded a cost",
     detail: "Electrical fixtures commitment added to the fit-out budget.",
+    targetType: "budget",
     occurredAt: "2026-07-02T11:10:00.000Z",
   },
 ];

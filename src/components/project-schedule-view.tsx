@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 import { NewTaskButton } from "@/components/action-buttons";
 import { useLocalStore } from "@/components/local-store";
@@ -11,13 +12,37 @@ import { localToday } from "@/lib/mock-data";
 export function ProjectScheduleView({
   projectId,
   focusTaskId,
+  openTaskOnLoad = false,
+  focusCommentId,
 }: {
   projectId: string;
   focusTaskId?: string;
+  openTaskOnLoad?: boolean;
+  focusCommentId?: string;
 }) {
   const { comments, openNewTask, openTask, projects, updateTask } =
     useLocalStore();
   const project = projects.find((item) => item.id === projectId);
+  const openedFromActivity = useRef(false);
+
+  useEffect(() => {
+    if (
+      !openTaskOnLoad ||
+      !focusTaskId ||
+      !project ||
+      openedFromActivity.current
+    ) {
+      return;
+    }
+    openedFromActivity.current = true;
+    openTask(project.id, focusTaskId, focusCommentId);
+  }, [
+    focusCommentId,
+    focusTaskId,
+    openTask,
+    openTaskOnLoad,
+    project,
+  ]);
 
   if (!project) {
     return (

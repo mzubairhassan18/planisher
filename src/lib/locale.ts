@@ -96,3 +96,49 @@ export function formatMoney(
     maximumFractionDigits: 0,
   }).format(minorUnits / 100);
 }
+
+function convertChunk(n: number): string {
+  const ones = [
+    "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+    "seventeen", "eighteen", "nineteen",
+  ];
+  const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+  const parts: string[] = [];
+  if (n >= 100) {
+    parts.push(ones[Math.floor(n / 100)] + " hundred");
+    n %= 100;
+  }
+  if (n >= 20) {
+    parts.push(tens[Math.floor(n / 10)]);
+    n %= 10;
+  }
+  if (n > 0) parts.push(ones[n]);
+  return parts.join(" ");
+}
+
+function toWords(n: number): string {
+  if (n === 0) return "zero";
+  let result = "";
+  if (n < 0) {
+    result += "negative ";
+    n = Math.abs(n);
+  }
+  const chunks: [number, string][] = [
+    [1_000_000_000, "billion"],
+    [1_000_000, "million"],
+    [1_000, "thousand"],
+  ];
+  for (const [divisor, label] of chunks) {
+    if (n >= divisor) {
+      const count = Math.floor(n / divisor);
+      result += convertChunk(count) + " " + label + " ";
+      n %= divisor;
+    }
+  }
+  return result + convertChunk(n);
+}
+
+export function moneyToWords(minorUnits: number): string {
+  return toWords(Math.round(minorUnits / 100)).replace(/\s+/g, " ").trim();
+}
