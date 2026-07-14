@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { signInAction } from "@/app/auth/actions";
 import { AuthCard, AuthField } from "@/components/auth-card";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 export default async function SignInPage({
   searchParams,
@@ -37,9 +38,11 @@ export default async function SignInPage({
         <Link className="auth-forgot" href="/forgot-password">
           Forgot password?
         </Link>
-        <button className="primary-button auth-submit" type="submit">
-          Sign in
-        </button>
+        <FormSubmitButton
+          className="primary-button auth-submit"
+          label="Sign in"
+          pendingLabel="Signing in…"
+        />
       </form>
     </AuthCard>
   );

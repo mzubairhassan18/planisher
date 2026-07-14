@@ -1,7 +1,13 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { Building2, Check, UsersRound, UserRound } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  Building2,
+  Check,
+  LoaderCircle,
+  UsersRound,
+  UserRound,
+} from "lucide-react";
 
 import {
   completeOnboardingAction,
@@ -11,6 +17,10 @@ import {
   detectLocaleSettings,
   fallbackLocaleSettings,
 } from "@/lib/locale";
+import {
+  finishNavigationProgress,
+  startNavigationProgress,
+} from "@/components/navigation-progress";
 
 const initialState: OnboardingActionState = {};
 
@@ -37,6 +47,27 @@ export function OnboardingDialog({
   const [timezone, setTimezone] = useState(fallbackLocaleSettings.timezone);
   const [currency, setCurrency] = useState(fallbackLocaleSettings.currency);
   const localeDetected = useRef(false);
+  const wasPending = useRef(false);
+
+  useEffect(() => {
+    if (pending) {
+      wasPending.current = true;
+      startNavigationProgress();
+      return;
+    }
+    if (wasPending.current) {
+      wasPending.current = false;
+      const timer = window.setTimeout(finishNavigationProgress, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [pending]);
+
+  useEffect(
+    () => () => {
+      if (wasPending.current) finishNavigationProgress();
+    },
+    [],
+  );
 
   const canContinueProfile = name.trim().length >= 2 && Boolean(jobRole);
   const canContinueWorkspace =
@@ -252,7 +283,19 @@ export function OnboardingDialog({
                 Continue
               </button>
             ) : (
-              <button className="primary-button" disabled={pending} type="submit">
+              <button
+                aria-busy={pending}
+                className="primary-button"
+                disabled={pending}
+                type="submit"
+              >
+                {pending ? (
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="button-spinner"
+                    size={16}
+                  />
+                ) : null}
                 {pending ? "Creating workspace…" : "Finish setup"}
               </button>
             )}

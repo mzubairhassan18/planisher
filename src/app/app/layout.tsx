@@ -2,6 +2,10 @@ import { AppShell } from "@/components/app-shell";
 import { LocalDialogs } from "@/components/local-dialogs";
 import { LocalStoreProvider } from "@/components/local-store";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
+import {
+  mapStarterTemplates,
+  type StarterTemplateRow,
+} from "@/lib/starter-templates";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -22,7 +26,11 @@ export default async function WorkspaceLayout({
   }
 
   const userId = data.claims.sub;
-  const [{ data: profile }, { data: membership }] = await Promise.all([
+  const [
+    { data: profile },
+    { data: membership },
+    { data: starterTemplateRows },
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select("name, job_role")
@@ -36,6 +44,34 @@ export default async function WorkspaceLayout({
       .order("created_at")
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("starter_templates")
+      .select(
+        `
+          id,
+          name,
+          category,
+          description,
+          estimated_duration_days,
+          created_at,
+          starter_template_tasks (
+            id,
+            type,
+            title,
+            description,
+            start_offset_days,
+            duration_days,
+            sort_order
+          ),
+          starter_template_dependencies (
+            id,
+            predecessor_task_id,
+            successor_task_id
+          )
+        `,
+      )
+      .eq("is_published", true)
+      .order("name"),
   ]);
   const { data: workspace } = membership?.workspace_id
     ? await supabase
@@ -77,6 +113,9 @@ export default async function WorkspaceLayout({
         role: jobRole,
         color: "#1f6b4f",
       }}
+      initialTemplates={mapStarterTemplates(
+        starterTemplateRows as StarterTemplateRow[] | null,
+      )}
     >
       <AppShell
         user={{ email, name: displayName }}

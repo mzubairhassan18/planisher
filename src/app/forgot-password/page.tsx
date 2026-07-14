@@ -1,5 +1,6 @@
 import { forgotPasswordAction } from "@/app/auth/actions";
 import { AuthCard, AuthField } from "@/components/auth-card";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 export default async function ForgotPasswordPage({
   searchParams,
@@ -24,9 +25,11 @@ export default async function ForgotPasswordPage({
           placeholder="you@company.com"
           type="email"
         />
-        <button className="primary-button auth-submit" type="submit">
-          Send reset link
-        </button>
+        <FormSubmitButton
+          className="primary-button auth-submit"
+          label="Send reset link"
+          pendingLabel="Sending link…"
+        />
       </form>
     </AuthCard>
   );

@@ -54,7 +54,10 @@ export interface Project {
 export interface ProjectTemplate {
   id: string;
   name: string;
-  sourceProjectId: string;
+  sourceProjectId?: string;
+  category?: string;
+  estimatedDurationDays?: number;
+  isStarter?: boolean;
   description: string;
   tasks: ProjectTask[];
   dependencies: TaskDependency[];

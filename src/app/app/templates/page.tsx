@@ -29,7 +29,11 @@ export default function TemplatesPage() {
                 <div className="template-card-icon">
                   <CalendarRange aria-hidden="true" size={20} />
                 </div>
-                <span className="eyebrow">Project template</span>
+                <span className="eyebrow">
+                  {template.isStarter
+                    ? `${template.category ?? "Construction"} starter`
+                    : "Workspace template"}
+                </span>
                 <h2>{template.name}</h2>
                 <p>{template.description || "Reusable construction plan."}</p>
                 <dl>
@@ -42,8 +46,12 @@ export default function TemplatesPage() {
                     <dd>{template.dependencies.length}</dd>
                   </div>
                   <div>
-                    <dt>Source</dt>
-                    <dd>{source?.name ?? "Project"}</dd>
+                    <dt>{template.isStarter ? "Duration" : "Source"}</dt>
+                    <dd>
+                      {template.isStarter
+                        ? `${template.estimatedDurationDays ?? "—"} days`
+                        : source?.name ?? "Project"}
+                    </dd>
                   </div>
                 </dl>
                 <button

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { useLocalStore } from "@/components/local-store";
+import { startNavigationProgress } from "@/components/navigation-progress";
 import { getTaskScheduleStatus } from "@/lib/progress";
 
 function DialogFrame({
@@ -125,6 +126,7 @@ function NewProjectDialog() {
             templateId: String(data.get("templateId") || "") || undefined,
           });
           closeDialog();
+          startNavigationProgress();
           router.push(`/app/projects/${id}/overview`);
         }}
       >
@@ -375,6 +377,7 @@ function DeleteProjectDialog({ projectId }: { projectId: string }) {
             className="danger-button"
             onClick={() => {
               deleteProject(project.id);
+              startNavigationProgress();
               router.push("/app/projects");
             }}
             type="button"
@@ -715,6 +718,7 @@ function ActivityDrawer({ activityId }: { activityId: string }) {
             className="primary-button"
             onClick={() => {
               closeDialog();
+              startNavigationProgress();
               router.push(destination);
             }}
             type="button"
@@ -727,6 +731,7 @@ function ActivityDrawer({ activityId }: { activityId: string }) {
               className="secondary-button"
               onClick={() => {
                 closeDialog();
+                startNavigationProgress();
                 router.push(`/app/projects/${project.id}/overview`);
               }}
               type="button"

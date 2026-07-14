@@ -1,5 +1,6 @@
 import { signUpAction } from "@/app/auth/actions";
 import { AuthCard, AuthField } from "@/components/auth-card";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 export default async function SignUpPage({
   searchParams,
@@ -38,9 +39,11 @@ export default async function SignUpPage({
           placeholder="At least 8 characters"
           type="password"
         />
-        <button className="primary-button auth-submit" type="submit">
-          Create account
-        </button>
+        <FormSubmitButton
+          className="primary-button auth-submit"
+          label="Create account"
+          pendingLabel="Creating account…"
+        />
       </form>
     </AuthCard>
   );

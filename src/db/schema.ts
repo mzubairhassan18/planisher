@@ -102,6 +102,106 @@ export const profiles = pgTable("profiles", {
   ...timestamps,
 }).enableRLS();
 
+export const starterTemplates = pgTable(
+  "starter_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    category: text("category").notNull(),
+    description: text("description").default("").notNull(),
+    estimatedDurationDays: integer("estimated_duration_days").notNull(),
+    isPublished: boolean("is_published").default(true).notNull(),
+    version: integer("version").default(1).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("starter_templates_slug_unique").on(table.slug),
+    check(
+      "starter_templates_duration_check",
+      sql`${table.estimatedDurationDays} > 0`,
+    ),
+    check("starter_templates_version_check", sql`${table.version} > 0`),
+  ],
+).enableRLS();
+
+export const starterTemplateTasks = pgTable(
+  "starter_template_tasks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => starterTemplates.id, { onDelete: "cascade" }),
+    taskKey: text("task_key").notNull(),
+    phase: text("phase").notNull(),
+    type: taskType("type").default("task").notNull(),
+    title: text("title").notNull(),
+    description: text("description").default("").notNull(),
+    startOffsetDays: integer("start_offset_days").notNull(),
+    durationDays: integer("duration_days").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("starter_template_tasks_key_unique").on(
+      table.templateId,
+      table.taskKey,
+    ),
+    uniqueIndex("starter_template_tasks_sort_unique").on(
+      table.templateId,
+      table.sortOrder,
+    ),
+    index("starter_template_tasks_template_sort_idx").on(
+      table.templateId,
+      table.sortOrder,
+    ),
+    check(
+      "starter_template_tasks_offset_check",
+      sql`${table.startOffsetDays} >= 0`,
+    ),
+    check(
+      "starter_template_tasks_duration_check",
+      sql`${table.durationDays} > 0`,
+    ),
+    check("starter_template_tasks_sort_check", sql`${table.sortOrder} >= 0`),
+  ],
+).enableRLS();
+
+export const starterTemplateDependencies = pgTable(
+  "starter_template_dependencies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => starterTemplates.id, { onDelete: "cascade" }),
+    predecessorTaskId: uuid("predecessor_task_id")
+      .notNull()
+      .references(() => starterTemplateTasks.id, { onDelete: "cascade" }),
+    successorTaskId: uuid("successor_task_id")
+      .notNull()
+      .references(() => starterTemplateTasks.id, { onDelete: "cascade" }),
+    type: dependencyType("type").default("FS").notNull(),
+    lagWorkingDays: integer("lag_working_days").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("starter_template_dependencies_unique").on(
+      table.predecessorTaskId,
+      table.successorTaskId,
+      table.type,
+    ),
+    index("starter_template_dependencies_template_idx").on(table.templateId),
+    check(
+      "starter_template_dependencies_no_self_check",
+      sql`${table.predecessorTaskId} <> ${table.successorTaskId}`,
+    ),
+  ],
+).enableRLS();
+
 export const workspaces = pgTable(
   "workspaces",
   {
@@ -566,6 +666,8 @@ export const workspaceSubscriptions = pgTable(
 ).enableRLS();
 
 export type Profile = typeof profiles.$inferSelect;
+export type StarterTemplate = typeof starterTemplates.$inferSelect;
+export type StarterTemplateTask = typeof starterTemplateTasks.$inferSelect;
 export type Workspace = typeof workspaces.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type Task = typeof tasks.$inferSelect;

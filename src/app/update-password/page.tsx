@@ -1,5 +1,6 @@
 import { updatePasswordAction } from "@/app/auth/actions";
 import { AuthCard, AuthField } from "@/components/auth-card";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 export default async function UpdatePasswordPage({
   searchParams,
@@ -23,9 +24,11 @@ export default async function UpdatePasswordPage({
           placeholder="At least 8 characters"
           type="password"
         />
-        <button className="primary-button auth-submit" type="submit">
-          Update password
-        </button>
+        <FormSubmitButton
+          className="primary-button auth-submit"
+          label="Update password"
+          pendingLabel="Updating password…"
+        />
       </form>
     </AuthCard>
   );

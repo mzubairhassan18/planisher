@@ -24,8 +24,9 @@ The product should stay easy enough for one person building a house while retain
 ### 2.1 Runtime architecture today
 
 The repository is a desktop-first UI prototype with hosted identity and a provisioned
-development database. Product records still use the browser-local prototype store;
-the next slice replaces that store with server-controlled Supabase data access.
+development database. The built-in starter-plan catalog is now persisted in Supabase;
+user-created product records still use the browser-local prototype store. The next
+slice replaces that remaining store with server-controlled Supabase data access.
 
 ```mermaid
 flowchart LR
@@ -34,8 +35,10 @@ flowchart LR
     STATE --> EMPTY["Empty by default"]
     STATE --> URLS["Temporary browser object URLs for media"]
     AUTHUI["Next.js auth routes"] --> AUTH["Supabase Auth"]
-    DB["Supabase PostgreSQL<br/>15 RLS-protected tables"]
-    UI -. "product wiring next" .-> DB
+    DB["Supabase PostgreSQL<br/>18 RLS-protected tables"]
+    DB --> CATALOG["Read-only starter templates<br/>and realistic task sequences"]
+    CATALOG --> UI
+    UI -. "remaining product wiring next" .-> DB
 ```
 
 There are currently:
@@ -50,20 +53,21 @@ There are currently:
 - no subscription or usage-limit enforcement;
 - no durable object/file storage.
 
-A full browser refresh clears temporary product data and returns to an empty workspace.
-No sample projects, templates, tasks, files, costs, activity, or team members are
-created automatically. The only runtime identity is the authenticated Supabase user.
-Selected image, audio, and video files are represented by temporary object URLs and
-are not uploaded anywhere.
+A full browser refresh clears user-created product data and returns to an empty
+workspace. No fake projects, users, costs, activity, or media are created. Five
+read-only starter plans (single-storey house, double-storey house, multi-storey
+building, hospital, and school) are loaded from Supabase for authenticated users.
+The only runtime identity is the authenticated Supabase user. Selected image, audio,
+and video files are represented by temporary object URLs and are not uploaded anywhere.
 
 ### 2.2 Working prototype capabilities
 
 | Area | Current behavior |
 | --- | --- |
-| Application shell | Desktop navigation, project/workspace menu, user menu, locale summary, and global project/task search |
+| Application shell | Desktop navigation, project/workspace menu, user menu, locale summary, global search, overflow-safe identity labels, light/dark/system themes, global navigation progress, and route loading skeletons |
 | Dashboard | Portfolio metrics, project cards, delayed-task links, recent activity, and budget summary |
 | Projects | Create blank or template-based project, search, status filter, grid/list view, duplicate, save as template, and delete |
-| Templates | Create a template from an existing project and reuse its tasks/dependencies with shifted dates and reset progress |
+| Templates | Load five persistent, RLS-protected starter plans; create temporary workspace templates; reuse tasks/dependencies with shifted dates and reset progress |
 | Schedule | DHTMLX Gantt rendering, hierarchy, milestones, dependencies, day/week/month scale, task search, delayed filter, progress drag, issue flag, and focused task highlight |
 | Task drawer | Edit title, description, dates, assignee, and progress; add task-linked budget/expense; add comments or raised problems |
 | Comments/media | Text comments and problems can select images, audio, or video for temporary local preview |
@@ -80,9 +84,19 @@ are not uploaded anywhere.
 - File and comment-media selection stores metadata/object URLs only; there is no upload progress, signed download, validation service, or persistence.
 - Activity resembles an audit trail but is mutable client memory, has no immutable before/after record, and is not security-grade.
 - Budget calculations work in the browser, but there are no atomic server transactions or authorization rules.
-- Seeded people are display records, not real accounts.
+- Workspace member invitations and real multi-user project assignments are not wired yet.
 - Some prototype source strings contain character-encoding artifacts and need a cleanup pass.
 - Automated unit, integration, end-to-end, accessibility, tenant-isolation, and large-Gantt tests are still missing.
+
+### 2.4 Starter-plan and theme decisions (2026-07-14)
+
+- Residential sequences follow the [NAHB outline of major construction phases](https://www.nahb.org/-/media/NAHB/other/builder-books/basic-construction-management/MT-GeneralOutlineOfMajorConstructionPhases.pdf) and the staged design-to-use structure in the [RIBA Plan of Work 2020](https://www.architecture.com/-/media/GatherContent/Test-resources-page/Additional-Documents/BOOKLETPRINTRIBAPlanofWork2020Overviewpdf.pdf).
+- Hospital tasks add clinical workflows, specialist MEP/communications, infection control, validation, training, and regulatory readiness based on the [WBDG hospital guidance](https://stg.wbdg.org/building-types/health-care-facilities/hospital) and whole-life [building commissioning process](https://stg.wbdg.org/building-commissioning).
+- School tasks add stakeholder briefing, safe access, specialist learning spaces, indoor-environment verification, staff training, and post-occupancy readiness based on the [WBDG elementary school guidance](https://stg.wbdg.org/building-types/education-facilities/elementary-school) and the [US Department of Energy zero-energy schools guidance](https://www.energy.gov/cmei/buildings/zero-energy-schools-design-implementation-guidance).
+- Template durations and dependencies are editable starter assumptions. They are not engineering advice and must be reviewed for local code, procurement, site conditions, inspections, and authority requirements.
+- Light/dark/system theming uses the browser's `prefers-color-scheme` preference and an early `color-scheme` declaration to prevent a mismatched initial render, following [MDN color-scheme guidance](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/color-scheme).
+- Long workspace/account labels are clipped safely and glide only while their parent control is hovered or keyboard-focused. Continuous marquee motion was rejected because moving content must be pausable and reduced-motion preferences must be respected; see [WCAG Pause, Stop, Hide](https://www.w3.org/WAI/WCAG21/Understanding/pause-stop-hide.html) and [W3C reduced-motion technique C39](https://www.w3.org/WAI/WCAG22/Techniques/css/C39).
+- Dynamic workspace routes use the Next.js `loading.tsx` convention so a prefetched skeleton appears immediately while server-rendered content streams. Server-action buttons also expose their own pending label and spinner, while a thin global progress line covers links and programmatic navigation.
 
 ## 3. Newly promoted MVP requirements
 
@@ -266,8 +280,9 @@ never stored in this repository.
 - [x] `H1-03` Define schemas for comments, attachments, audit, budget, costs, plans, subscriptions, and usage. `M`
 - [x] `H1-04` Add keys, checks, indexes, tenant columns, record versions, and soft-delete rules. `M`
 - [x] `H1-05` Generate and review the initial schema and RLS migrations; apply them only to the development project. `M`
-- [ ] `H1-06` Add deterministic seed data and a safe development reset command. `M`
-- [ ] `H1-07` Add repository contracts, Drizzle adapters, application services, and transaction boundaries. `M`
+- [x] `H1-06` Add the persistent read-only starter-template catalog and five researched construction plans. `M`
+- [ ] `H1-07` Add a safe development reset command for user-created test data. `S`
+- [ ] `H1-08` Add repository contracts, Drizzle adapters, application services, and transaction boundaries. `M`
 
 ### H2 - Authentication, workspaces, and roles
 

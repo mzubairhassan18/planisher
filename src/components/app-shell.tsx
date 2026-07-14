@@ -20,8 +20,12 @@ import {
 
 import { signOutAction } from "@/app/auth/actions";
 import { NewProjectButton } from "@/components/action-buttons";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { LocaleSummary } from "@/components/locale-summary";
 import { useLocalStore } from "@/components/local-store";
+import { startNavigationProgress } from "@/components/navigation-progress";
+import { OverflowGlide } from "@/components/overflow-glide";
+import { ThemeControl } from "@/components/theme-control";
 
 export function AppShell({
   children,
@@ -137,6 +141,7 @@ export function AppShell({
   function openSearchResult(href: string) {
     setSearchQuery("");
     setSearchOpen(false);
+    startNavigationProgress();
     router.push(href);
   }
 
@@ -159,9 +164,9 @@ export function AppShell({
             type="button"
           >
             <span className="workspace-monogram">{initials || "P"}</span>
-            <span>
-              <strong>{workspaceName}</strong>
-              <small>{user.email}</small>
+            <span className="identity-copy">
+              <OverflowGlide className="identity-name" text={workspaceName} />
+              <OverflowGlide className="identity-meta" text={user.email} />
             </span>
             <ChevronDown
               aria-hidden="true"
@@ -304,8 +309,8 @@ export function AppShell({
                 {initials || "PU"}
               </span>
               <span className="topbar-user-copy">
-                <strong>{user.name}</strong>
-                <small>{user.email}</small>
+                <OverflowGlide className="identity-name" text={user.name} />
+                <OverflowGlide className="identity-meta" text={user.email} />
               </span>
               <ChevronDown
                 aria-hidden="true"
@@ -332,11 +337,14 @@ export function AppShell({
                   <UserRound aria-hidden="true" size={15} />
                   Profile and preferences
                 </Link>
+                <ThemeControl />
                 <form action={signOutAction}>
-                  <button className="user-menu-signout" role="menuitem" type="submit">
-                    <LogOut aria-hidden="true" size={15} />
-                    Sign out
-                  </button>
+                  <FormSubmitButton
+                    className="user-menu-signout"
+                    icon={<LogOut aria-hidden="true" size={15} />}
+                    label="Sign out"
+                    pendingLabel="Signing out…"
+                  />
                 </form>
               </div>
             ) : null}

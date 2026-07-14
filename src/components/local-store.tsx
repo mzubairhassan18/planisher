@@ -146,14 +146,18 @@ function shiftDate(date: string, offsetDays: number) {
 export function LocalStoreProvider({
   children,
   currentUser,
+  initialTemplates = [],
 }: {
   children: React.ReactNode;
   currentUser: TeamMember;
+  initialTemplates?: ProjectTemplate[];
 }) {
   const actorId = currentUser.id;
   const members = useMemo(() => [currentUser], [currentUser]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
+  const [templates, setTemplates] = useState<ProjectTemplate[]>(() =>
+    structuredClone(initialTemplates),
+  );
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [budgetLines, setBudgetLines] = useState<BudgetLine[]>([]);
   const [costEntries, setCostEntries] = useState<CostEntry[]>([]);

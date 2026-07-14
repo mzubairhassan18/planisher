@@ -13,6 +13,7 @@ import {
 
 import { AvatarStack } from "@/components/avatar-stack";
 import { useLocalStore } from "@/components/local-store";
+import { startNavigationProgress } from "@/components/navigation-progress";
 import { StatusBadge } from "@/components/status-badge";
 import { localToday } from "@/lib/local-date";
 import {
@@ -121,6 +122,7 @@ export function ProjectWorkspace({
                   onClick={() => {
                     const projectId = duplicateProject(project.id);
                     setMenuOpen(false);
+                    startNavigationProgress();
                     router.push(`/app/projects/${projectId}/overview`);
                   }}
                   role="menuitem"
