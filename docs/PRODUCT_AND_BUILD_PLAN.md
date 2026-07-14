@@ -1,8 +1,11 @@
 # Planisher — Product, Architecture, and Build Plan
 
-Status: Approved for local desktop prototype execution  
-Prepared: 2026-07-04  
-Scope: Local desktop development first. Authentication, production billing, mobile-specific development, and production infrastructure are deferred.
+Status: Local UI prototype implemented; hosted development architecture approved and in implementation
+Prepared: 2026-07-04
+Last revised: 2026-07-14
+Scope: Desktop-first SaaS. The next milestone promotes authentication, user management, PostgreSQL persistence, private file storage, and plan-limit enforcement into active scope. Mobile-specific development and real payment collection remain deferred.
+
+> Current execution source of truth: [Current State and Hosted Development Roadmap](./CURRENT_STATE_AND_HOSTED_ROADMAP.md). This document remains the detailed product specification and design history.
 
 ## 1. Executive summary
 
@@ -10,9 +13,10 @@ Planisher is a construction planning SaaS for everyone from a person building on
 
 > Turn a construction plan into one calm, shared source of truth for schedule, work, cost, files, and decisions.
 
-The first release will let a user:
+The hosted development release will let a user:
 
-- use a preconfigured local workspace and demo user without signing in;
+- sign up, sign in, recover an account, and work inside one or more workspaces;
+- invite and manage workspace/project members with server-enforced roles;
 - create, archive, and duplicate projects;
 - create hierarchical tasks and dependencies;
 - plan and edit work in a Gantt chart;
@@ -20,17 +24,25 @@ The first release will let a user:
 - see an append-only audit trail of changes;
 - build a project budget and record committed/actual costs;
 - create reusable project templates;
-- control access at both workspace and project level.
+- control access at both workspace and project level;
+- store product records and private task/project media durably;
+- see current plan usage and receive clear server-enforced project, task, member, and storage limits.
 
-The build will follow the requested order:
+The work has followed this order:
 
 1. approve the product and technical plan;
-2. build the complete interface against typed mock data;
-3. implement the backend, in-memory repositories, and ORM schemas with a local demo identity;
-4. wire the approved interface to the backend;
-5. harden, test, and prepare the database migration path.
+2. build the desktop interface against typed mock data (substantially complete);
+3. review the working prototype and select hosted development infrastructure (current gate);
+4. implement authentication, Drizzle/PostgreSQL persistence, private media storage, roles, and entitlements;
+5. wire every approved interface to the hosted backend and remove production-path mock state;
+6. harden tenant isolation, accessibility, uploads, performance, and release operations.
 
-The initial runtime data store will be an in-memory, object-based store. It is deliberately a development/demo adapter: restarting the server erases data. Domain services will depend on repository interfaces, and Drizzle ORM PostgreSQL schemas will be defined at the same time. Replacing the memory repositories with PostgreSQL repositories later must not require changing the UI or business rules.
+The current product runtime is a client-side React memory store that starts empty. A
+browser refresh clears temporary product data, and no sample projects, tasks, users,
+files, activity, or costs are created automatically. Selected media exists only as
+temporary browser object URLs. Supabase Auth and the PostgreSQL schema are connected;
+the next architecture slice moves product-data ownership out of `LocalStoreProvider`
+through server-side policies, repositories, and application services.
 
 ## 2. Product position
 
@@ -65,7 +77,7 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 - **Fast daily updates:** common field updates should require a few taps.
 - **Safe reuse:** duplication copies the plan, not historical noise or sensitive actual costs by accident.
 - **Explain schedule status:** blue, red, green, and gray states must have plain-language labels.
-- **Local first:** prove the planning workflow before adding authentication, billing, or production infrastructure.
+- **Hosted development next:** the planning workflow has been proven locally; identity, persistence, tenant boundaries, media storage, and plan enforcement are now the active foundation.
 - **Construction collaboration should not be taxed:** restricted clients and subcontractor guests should not require full paid seats.
 - **Accessible status:** color is never the only signal.
 
@@ -75,10 +87,11 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 
 #### Workspaces and people
 
-- One preconfigured local workspace and demo user.
-- Seeded team members for assignments and UI demonstration.
-- No sign-in, invitation, workspace switching, or role-management flow in the local prototype.
-- The domain keeps workspace/user IDs so multi-tenant authentication can be added later without reshaping project data.
+- Email/password sign-up, verification, sign-in, sign-out, and password reset.
+- Personal workspace creation during onboarding and support for additional workspaces.
+- Workspace member invitation, acceptance, role change, deactivation, and workspace switching.
+- Project membership, project-specific roles, and separate cost visibility.
+- Seeded demo data remains available only as an explicit onboarding/testing option.
 
 #### Projects
 
@@ -130,8 +143,6 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 
 - Native iOS/Android apps; the web app will be responsive.
 - Mobile-specific layouts and interactions; the local prototype is desktop-first.
-- Sign-up, sign-in, password reset, email verification, invitations, sessions, roles, and other login-required work.
-- Production multi-tenancy and authorization enforcement.
 - Full drawing markup, BIM, takeoff, procurement, payroll, time clock, and equipment management.
 - RFIs, submittals, punch lists, change-order approval, invoicing, and accounting integrations.
 - Real-time multi-cursor collaboration.
@@ -141,8 +152,7 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 - Multiple currencies inside one project.
 - Legal-grade document signatures.
 - SAML/SCIM implementation; the authorization model will leave room for them.
-- Permanent file or database storage in the initial adapter.
-- Production billing, checkout, and plan-entitlement enforcement.
+- Real payment collection, checkout, invoices, taxes, and Stripe webhooks during the first hosted testing milestone. Test subscriptions and server-enforced entitlements are included.
 
 ### 3.3 Definition of an “interaction” for audit
 
@@ -173,11 +183,17 @@ Ordinary reads, mouse movement, filters, and page views will not enter the busin
 
 #### First-run journey
 
-1. User starts the local development server.
-2. Planisher opens directly into a seeded local workspace—no login required.
-3. User chooses “Create project,” “Use template,” or “Explore demo.”
-4. User starts blank, selects a template, or opens seeded demo data.
-5. User lands in the project schedule with a three-step contextual checklist.
+1. User signs up or signs in through Supabase Auth.
+2. Planisher opens an empty personal workspace for a new account.
+3. User creates the first project from a blank plan.
+4. After a project exists, the user may save its tasks as a reusable template.
+5. User lands in the project schedule and adds real tasks without sample records.
+
+The implemented onboarding gate collects the authenticated user's display name and
+role, workspace/company name and type, expected collaborator count, detected timezone,
+and currency. It creates the profile, workspace, owner membership, and Personal test
+subscription atomically before the dashboard becomes available. Real member
+invitations remain a separate workflow; onboarding never creates fake users.
 
 #### Daily project-manager journey
 
@@ -433,49 +449,62 @@ Do not use DHTMLX v9 or earlier; its free edition uses GPL terms. Pin v10 or lat
 - no required MVP feature is PRO-only;
 - bundle and styling do not contaminate unrelated pages.
 
-## 8. Local prototype identity and deferred authorization
+## 8. Authentication, tenancy, and authorization
 
-### 8.1 Local identity
+### 8.1 Authentication recommendation
 
-The current execution phase has no login requirement.
+Use Supabase Auth for the hosted development milestone.
 
-- The application opens directly into one seeded local workspace.
-- A constant local actor identifies changes in the audit feed.
-- Seeded team members may be assigned to tasks, but they are not authenticated accounts.
-- All local routes are directly accessible.
-- A visible “Local demo — data resets on restart” label prevents the prototype from being mistaken for a production system.
+Initial methods:
 
-This removes authentication complexity from the UI and backend while preserving `organizationId`, `createdBy`, and assignee IDs in domain records.
+- email/password sign-up and sign-in;
+- email verification;
+- password reset;
+- cookie-based sessions compatible with Next.js App Router server rendering;
+- sign-out and route protection with return-URL preservation.
 
-### 8.2 Local access model
+Google/Microsoft OAuth and TOTP 2FA remain optional after the core account journey is stable. SAML SSO and SCIM remain enterprise-only future work.
 
-- The local actor can create and edit all seeded data.
-- No role checks, invitations, sessions, or entitlement enforcement run in this phase.
-- Repository methods still require an `organizationId` so future tenant boundaries are not erased.
-- The frontend receives a simple capability object, currently all enabled, rather than hard-coding permission assumptions in every component.
+Supabase Auth replaces the earlier Better Auth proposal because the selected development platform already provides Auth, PostgreSQL JWT context, Storage identity, and Row Level Security integration. Planisher profiles, workspace membership, roles, invitations, and entitlements remain application-owned tables and services.
 
-### 8.3 Deferred production model
+### 8.2 Tenant model
 
-When persistent multi-user development begins:
+- A Planisher workspace is an `organization` application record.
+- A Supabase `auth.users` identity has one `profile` and may belong to multiple workspaces.
+- Every tenant-owned product row includes `organizationId`.
+- Project-owned rows additionally include `projectId` where useful for explicit scoping and indexes.
+- A request resolves the authenticated user and active workspace before product queries run.
+- Project access requires project membership unless the workspace role grants portfolio-wide access.
 
-- use Better Auth with its Next.js integration and organization plugin;
-- add email/password, verification, reset, secure sessions, and invitations;
-- enforce workspace and project roles on the server;
-- add OAuth/2FA only when the core account flow is stable;
-- use SAML SSO and SCIM only for a validated enterprise need;
-- switch Better Auth from its development adapter to Drizzle/PostgreSQL.
+### 8.3 Authorization layers
 
-The previously proposed roles remain a future design target: workspace `OWNER`, `ADMIN`, `MEMBER`, and `EXTERNAL`; project `PROJECT_MANAGER`, `SCHEDULER`, `FINANCE`, `CONTRIBUTOR`, and `VIEWER`.
+Authorization is the intersection of:
 
-### 8.4 Local security baseline
+1. authenticated user and valid session;
+2. active workspace membership;
+3. workspace permission;
+4. project permission;
+5. resource ownership/state;
+6. plan entitlement and remaining capacity.
+
+The server-side policy layer is authoritative. PostgreSQL and Storage RLS provide defense in depth. Client capability data controls presentation only and never grants access.
+
+Workspace roles remain `OWNER`, `ADMIN`, `MEMBER`, and `EXTERNAL`. Project roles remain `PROJECT_MANAGER`, `SCHEDULER`, `FINANCE`, `CONTRIBUTOR`, and `VIEWER`.
+
+### 8.4 Security baseline
 
 - Zod validation at every network boundary;
+- secure cookie/session handling through the official Supabase Next.js pattern;
+- server-side policy guards plus tenant-scoped repository queries;
+- RLS policies for exposed database tables and private Storage objects;
+- service-role and database credentials kept server-only;
 - sanitized text for descriptions and comments;
-- attachment type, name, and size validation;
-- no secrets in client bundles;
-- log/audit redaction;
-- dependency and license scanning;
-- bind the local development server to loopback by default.
+- attachment type, name, size, checksum, and entitlement validation;
+- short-lived signed URLs for private attachments;
+- append-only audit allowlists/redaction;
+- rate limits on sign-in, reset, invitation, and upload endpoints;
+- negative tenant-isolation tests for every aggregate;
+- project-scoped Supabase MCP access for development data, with writes limited to reviewed migrations.
 
 ## 9. Pricing recommendation
 
@@ -564,14 +593,16 @@ Planisher’s opportunity is transparent pricing between generic work management
 | Client server-state | TanStack Query | Optimistic Gantt/task mutations and cache invalidation |
 | Dates | date-fns | Date-only/working-day calculations |
 | ORM schemas | Drizzle ORM for PostgreSQL | Type-safe code-first schema and migrations |
-| Runtime store first | In-memory Maps behind repositories | Meets demo requirement and stays replaceable |
-| Local identity | Seeded workspace and local actor | No login required during local development |
-| Authentication later | Better Auth + organization plugin | Deferred until persistent multi-user work |
+| Prototype store | React memory state in `LocalStoreProvider` | Existing UI prototype only; removed from product-data ownership as hosted wiring completes |
+| Hosted database | Supabase PostgreSQL Free development project | Persistent relational data exposed through the RLS-protected Data API |
+| Authentication | Supabase Auth | Email/password sessions integrated with Next.js, PostgreSQL RLS, and Storage identity |
 | API | Versioned Next.js Route Handlers | Stable JSON contract for the frontend and future integrations |
 | Tests | Vitest + Testing Library + Playwright | Unit, component, integration, and end-to-end coverage |
 | Logging | Structured JSON logger with request IDs | Traceable service/audit operations |
-| Files | `FileStorage` interface + memory adapter | Later replace with S3/R2-compatible object storage |
-| Billing later | Stripe behind `BillingProvider` | Deferred until the local product workflow is validated |
+| Files | Supabase private Storage behind `FileStorage` | One provider for initial authenticated media; Cloudflare R2 remains the growth adapter |
+| Hosting | Local Next.js, optional Vercel Hobby preview | Personal/non-commercial hosted testing only on Hobby |
+| Entitlements first | Planisher `EntitlementService` + test subscriptions | Prove limits before payment integration |
+| Billing later | Stripe behind `BillingProvider` | Real checkout/webhooks remain deferred until packaging behavior is approved |
 
 Pin exact stable versions when execution starts and record them in the lockfile. Do not use floating “latest” versions in CI.
 
@@ -582,21 +613,26 @@ flowchart LR
     UI["Next.js UI<br/>Server + Client Components"]
     API["Versioned Route Handlers"]
     APP["Application Services"]
-    CONTEXT["Local Workspace Context"]
+    POLICY["Authentication + Authorization + Entitlements"]
     DOMAIN["Domain Rules"]
     REPO["Repository Interfaces"]
-    MEMORY["In-memory Adapters"]
-    PG["Future Drizzle/PostgreSQL Adapters"]
-    FILES["FileStorage Interface"]
+    DATAAPI["Supabase client + Data API"]
+    PG["Supabase PostgreSQL"]
+    FILES["Supabase Storage via FileStorage"]
+    AUTH["Supabase Auth"]
+    MCP["Project-scoped Supabase MCP"]
 
     UI --> API
     API --> APP
-    APP --> CONTEXT
+    API --> AUTH
+    APP --> POLICY
     APP --> DOMAIN
     APP --> REPO
-    REPO --> MEMORY
-    REPO -. later .-> PG
+    REPO --> DATAAPI
+    DATAAPI --> PG
     APP --> FILES
+    AUTH --> POLICY
+    MCP -. development only .-> PG
 ```
 
 Rules:
@@ -604,9 +640,11 @@ Rules:
 - React components never import a repository.
 - Route handlers validate input and delegate; they do not contain business rules.
 - Application services coordinate policy, domain rules, repositories, and audit.
-- Repositories retain organization scope; production authorization is deferred.
+- Repositories always require organization scope after server authorization succeeds.
 - Gantt-library objects are converted at the schedule adapter boundary.
-- The in-memory and PostgreSQL repositories must pass the same contract test suite.
+- Supabase Data API repositories and services must pass tenant-isolation and contract tests.
+- RLS is defense in depth and does not replace application policy guards.
+- AI/MCP access is development-project-only and project-scoped; writes are limited to reviewed development migrations.
 
 ### 10.3 Suggested source structure
 
@@ -624,6 +662,7 @@ src/
     budget/
     activity/
   features/
+    auth/
     organizations/
     projects/
     tasks/
@@ -632,9 +671,12 @@ src/
     comments/
     attachments/
     audit/
+    billing/
   server/
     application/
-    local-context/
+    auth/
+    authorization/
+    entitlements/
     domain/
     repositories/
       contracts/
@@ -654,6 +696,8 @@ src/
     factories/
     contract/
     e2e/
+  supabase/
+    policies/
 ```
 
 Feature code can contain its UI and validation, but server-only modules must be protected with `server-only`.
@@ -702,49 +746,49 @@ GET         /api/v1/organizations/:organizationId/assignees
 GET         /api/v1/me/work
 ```
 
-### 10.5 In-memory store
+### 10.5 Prototype memory state and retirement
 
-Use one process-wide store held behind `globalThis` during development to survive Next.js hot reload:
+The implemented prototype uses React `useState` in `LocalStoreProvider` and starts
+with empty product collections. It uses the authenticated Supabase user as the only
+initial actor/member, is not the previously proposed process-wide repository adapter,
+and does not survive a browser refresh. Comment media uses temporary object URLs;
+project files retain only client-memory metadata.
 
-```text
-Map<tableName, Map<id, record>>
-```
+Retirement rules:
 
-Requirements:
+- do not add new backend behavior to `LocalStoreProvider`;
+- preserve it temporarily as a UI fixture while hosted services are wired feature by feature;
+- create deterministic PostgreSQL seed/reset tooling for development instead of migrating ephemeral prototype state;
+- introduce optimistic record versions and transactions in application services/Data API repositories;
+- remove production-path mock imports after each critical journey uses persistent APIs;
+- keep isolated factories or fixtures for unit/component tests after runtime mock ownership is removed.
 
-- repository methods return copies, not mutable internal references;
-- indexes for organization, project, assignee, and task parent;
-- deterministic seed/reset functions;
-- monotonic record version for optimistic concurrency;
-- atomic application-service operation using clone/validate/commit for multi-record changes;
-- a fresh isolated store per unit/integration test;
-- memory file adapter with strict per-file and total-size limits;
-- no claim that the memory adapter is production safe.
+### 10.6 Hosted persistence path
 
-### 10.6 Database migration path
+1. Approve and provision one personal Supabase development project.
+2. Configure validated environment variables and a project-scoped MCP connection with reviewed migration-only writes.
+3. Define Drizzle PostgreSQL schemas, RLS policies, and reviewed migrations.
+4. Keep domain types independent of Drizzle row types and Supabase client response types.
+5. Implement Supabase Auth session resolution, application policy guards, and Supabase Data API repositories.
+6. Add transaction behavior so mutations and audit events succeed or fail together.
+7. Seed deterministic development data and run contract/tenant-isolation tests against PostgreSQL.
+8. Create private Supabase Storage buckets, attachment metadata, RLS, validation, signed access, and usage accounting.
+9. Wire frontend journeys feature by feature and remove their `LocalStoreProvider` product-state ownership.
+10. Implement test subscriptions and enforce active-project, task, member, guest, feature, and storage limits.
+11. Add backup/export and recovery documentation before treating any hosted data as durable.
+12. Keep `FileStorage` and `BillingProvider` boundaries so Cloudflare R2 and Stripe can be introduced later.
 
-1. Define Drizzle PostgreSQL schema and migrations now.
-2. Keep domain types independent of Drizzle row types.
-3. Run repository contract tests against memory.
-4. When persistence is approved, provision managed PostgreSQL.
-5. Implement Drizzle repositories against the existing interfaces.
-6. Run the same contract and tenant-isolation tests.
-7. Switch dependency injection by environment variable.
-8. Add transaction/outbox behavior for audit and notifications.
-9. Move files to S3/R2-compatible storage.
-10. Remove the demo reset warning only after backups and restore tests exist.
-
-Do not attempt to migrate ephemeral demo data unless specifically required.
+Ephemeral prototype data will be replaced by deterministic seed data; it will not be migrated as customer data.
 
 ## 11. Data model
 
 All IDs are UUIDs. All tenant product tables include `organizationId`, even when it can be reached through a project relationship; this supports explicit tenant scoping and indexing.
 
-### 11.1 Local workspace and future identity
+### 11.1 Supabase identity and workspaces
 
 #### `users`
 
-- Deferred as an authentication table. The prototype seeds compatible user-shaped assignee records.
+- Supabase `auth.users` owns authentication identities; Planisher profiles and memberships reference those IDs.
 - `id`
 - `name`
 - `email` unique, normalized
@@ -1014,6 +1058,26 @@ Sizing:
 
 Tasks larger than `M` must be split before implementation. IDs are stable for issues/commits.
 
+### Active next gate — Hosted development foundation
+
+The earlier phase list records the original local-prototype sequence. The current implementation order is maintained in [Current State and Hosted Development Roadmap](./CURRENT_STATE_AND_HOSTED_ROADMAP.md), Sections 9–10. Its `H0` through `H6` tasks supersede prior statements that authentication, persistence, user management, and entitlement enforcement are deferred.
+
+The hosted foundation decisions were approved on 2026-07-14:
+
+- [x] `H0-01` Approve Supabase Free for the development PostgreSQL database, Supabase Auth, and initial private Storage. `XS`
+- [x] `H0-02` Approve Supabase Auth in place of Better Auth. `XS`
+- [x] `H0-03` Approve project-scoped Supabase MCP access with writes limited to reviewed development migrations. `XS`
+- [x] `H0-04` Approve Supabase Storage first, with Cloudflare R2 retained as the media-growth adapter. `XS`
+- [x] `H0-05` Create the personal Vercel Hobby project, connect the GitHub repository, and deploy the testing build. `XS`
+
+The personal Supabase project and scoped MCP connection are provisioned. Secrets
+remain only in ignored local/Vercel environment settings. On 2026-07-14 the two
+reviewed development migrations were applied: 15 public tables now have RLS enabled,
+with 54 policies and 11 private authorization helpers. Product-data wiring remains
+the next implementation slice. The testing build is live at
+`https://planisher.vercel.app`; hosted email-confirmation and password-reset testing
+still requires the production/preview URLs in Supabase Auth URL Configuration.
+
 ### Gate A — Plan approval
 
 Deliverable: this document is reviewed and the MVP boundary, pricing hypothesis, roles, and Gantt choice are accepted.
@@ -1029,7 +1093,7 @@ Deliverable: this document is reviewed and the MVP boundary, pricing hypothesis,
 - [x] `P0-07` Add formatting, linting, type-check, and test scripts. `S`
 - [ ] `P0-08` Create environment-variable schema and example file. `XS`
 - [ ] `P0-09` Add CI for install, lint, type-check, unit tests, and build. `S`
-- [ ] `P0-10` Add architecture decision records for storage, deferred auth, Gantt, and money. `S`
+- [ ] `P0-10` Add architecture decision records for Storage, Supabase Auth, hosted PostgreSQL, Gantt, and money. `S`
 - [ ] `P0-11` Add third-party notices and dependency-license check. `XS`
 - [x] `P0-12` Define typed frontend mock contracts for workspace, project, task, budget, and audit. `S`
 - [x] `P0-13` Implement browser timezone/locale/currency detection with explicit fallbacks. `S`
@@ -1112,13 +1176,15 @@ Acceptance:
 
 #### Phase 3 — Domain, ORM, and in-memory infrastructure
 
+Status note (2026-07-14): the memory-repository implementation items below are retained as planning history but are no longer the active backend path. Use hosted-roadmap Phase `H1`; PostgreSQL and Drizzle are implemented directly, with deterministic seed/reset support for development.
+
 - [ ] `P3-01` Define domain IDs, date-only, money, and result/error types. `S`
 - [ ] `P3-02` Implement shared Zod schemas for API contracts. `M`
-- [ ] `P3-03` Define Drizzle local workspace/assignee tables; defer auth/session tables. `S`
+- [ ] `P3-03` Define Drizzle profile/workspace/member/invitation tables linked to Supabase Auth users. `S`
 - [ ] `P3-04` Define Drizzle project/schedule tables and indexes. `M`
 - [ ] `P3-05` Define Drizzle collaboration/audit tables and indexes. `M`
 - [ ] `P3-06` Define Drizzle budget/cost tables and indexes. `M`
-- [ ] `P3-07` Document subscription/usage tables as deferred. `XS`
+- [ ] `P3-07` Define plan, test-subscription, entitlement, and usage tables. `S`
 - [ ] `P3-08` Generate and review initial PostgreSQL migration files without connecting a database. `S`
 - [ ] `P3-09` Define repository interfaces by aggregate/use case. `M`
 - [ ] `P3-10` Implement process-wide in-memory table store. `M`
@@ -1170,31 +1236,19 @@ Acceptance:
 - every successful mutation has an audit event;
 - money/date/cycle edge cases are covered.
 
-### Gate C2 — Local context verified
+### Gate C2 — Identity and tenant isolation verified
 
-#### Phase 5 — Local workspace context
+#### Phase 5 — Superseded local-context phase
 
-- [ ] `P5-01` Implement the constant local actor provider. `XS`
-- [ ] `P5-02` Implement the seeded local workspace context. `S`
-- [ ] `P5-03` Expose all local application routes without authentication redirects. `XS`
-- [ ] `P5-04` Implement a typed all-enabled local capability object. `XS`
-- [ ] `P5-05` Attach local actor/workspace IDs to mutations and audit events. `S`
-- [ ] `P5-06` Display the local reset warning in the application shell. `XS`
-- [ ] `P5-07` Test that seeded records remain organization-scoped. `S`
-- [ ] `P5-08` Document Better Auth, roles, invitations, and billing as deferred production work. `XS`
+The original constant local actor/capability phase is complete only as a UI prototype technique and is not an active backend milestone. Replace it with hosted-roadmap Phase `H2`: Supabase Auth sessions, profiles, workspaces, members, invitations, project roles, centralized server policy guards, RLS, and negative tenant-isolation tests.
 
-Acceptance:
-
-- the application requires no sign-in;
-- every record and audit event has a consistent local workspace/actor;
-- restarting the memory store limitation is visibly disclosed;
-- future authentication can replace the context provider without changing feature components.
+Acceptance is defined in the hosted roadmap: authenticated routes, real workspace/project membership, safe role administration, no cross-tenant data/file access, and authoritative server permissions.
 
 ### Gate C3 — Versioned API contract verified
 
 #### Phase 6 — Route handlers
 
-- [ ] `P6-01` Implement request ID, local workspace context, validation, and error helpers. `M`
+- [ ] `P6-01` Implement request ID, authenticated workspace context, validation, and error helpers. `M`
 - [ ] `P6-02` Implement project list/create/get/update routes. `M`
 - [ ] `P6-03` Implement project archive/restore routes. `S`
 - [ ] `P6-04` Implement duplicate/template routes. `M`
@@ -1207,8 +1261,8 @@ Acceptance:
 - [ ] `P6-11` Implement cost-entry routes. `M`
 - [ ] `P6-12` Implement audit list/filter/cursor route. `M`
 - [ ] `P6-13` Implement dashboard and My Work routes. `M`
-- [ ] `P6-14` Implement seeded assignee read route. `S`
-- [ ] `P6-15` Keep subscription/usage routes deferred. `XS`
+- [ ] `P6-14` Implement workspace/project member and assignee routes. `M`
+- [ ] `P6-15` Implement plan, subscription, entitlement, and usage read routes. `M`
 - [ ] `P6-16` Generate/maintain API contract documentation. `S`
 - [ ] `P6-17` Add API integration tests for success/validation/conflict/permission cases. `M`
 
@@ -1216,8 +1270,8 @@ Acceptance:
 
 - routes are thin adapters to tested services;
 - response shapes match frontend contracts;
-- validation and local workspace scoping apply consistently;
-- conflict errors are machine-readable.
+- validation, authentication, tenant scoping, and authorization apply consistently;
+- conflict and plan-limit errors are machine-readable.
 
 ### Gate D — Frontend/backend wired MVP
 
@@ -1225,9 +1279,9 @@ Acceptance:
 
 - [ ] `P7-01` Create typed API client and normalized error mapping. `M`
 - [ ] `P7-02` Configure TanStack Query defaults and provider. `S`
-- [ ] `P7-03` Wire local actor/workspace context. `S`
-- [ ] `P7-04` Confirm all local routes work without authentication. `XS`
-- [ ] `P7-05` Wire local first-run guidance and locale summary. `S`
+- [ ] `P7-03` Wire authenticated session and active workspace context. `M`
+- [ ] `P7-04` Wire sign-up, verification, sign-in, sign-out, reset, invitation, and protected-route flows. `M`
+- [ ] `P7-05` Wire hosted onboarding, profile, workspace creation, and locale summary. `M`
 - [ ] `P7-06` Wire dashboard queries and refresh states. `M`
 - [ ] `P7-07` Wire projects list/create/edit/archive/restore. `M`
 - [ ] `P7-08` Wire project header/overview. `S`
@@ -1243,18 +1297,18 @@ Acceptance:
 - [ ] `P7-18` Wire budget lines, cost entries, and summaries. `M`
 - [ ] `P7-19` Wire audit feed filters and cursor pagination. `M`
 - [ ] `P7-20` Wire duplicate/template wizard and navigation. `M`
-- [ ] `P7-21` Wire seeded assignee display. `S`
-- [ ] `P7-22` Keep billing UI and usage enforcement deferred. `XS`
-- [ ] `P7-23` Replace mock capability states with the local capability object. `S`
-- [ ] `P7-24` Confirm no authentication or billing dependency enters the local bundle. `S`
+- [ ] `P7-21` Wire members, roles, invitations, project access, and assignee display. `M`
+- [ ] `P7-22` Wire pricing, test subscription, usage meters, and limit-reached states. `M`
+- [ ] `P7-23` Replace mock capability states with server-derived permissions. `M`
+- [ ] `P7-24` Replace mock entitlement states with server-derived entitlements and live usage. `M`
 - [ ] `P7-25` Remove production-path mock imports and add boundary test. `S`
 
 Acceptance:
 
-- every MVP journey uses backend state;
+- every MVP journey uses persistent backend state;
 - optimistic schedule edits roll back on failure;
-- validation and conflict failures are understandable;
-- restarting the demo resets data as documented.
+- validation, permission, conflict, and plan-limit failures are understandable;
+- refreshes, restarts, and new-device sessions preserve authorized data.
 
 ### Gate E — Release candidate
 
@@ -1286,24 +1340,11 @@ Acceptance:
 - 2,000-task target is usable;
 - setup and limitations are documented.
 
-#### Phase 9 — Persistence and production billing, after wired MVP approval
+#### Phase 9 — Superseded hosted-infrastructure phase
 
-- [ ] `P9-01` Select managed PostgreSQL provider/region and recovery objectives. `S`
-- [ ] `P9-02` Provision development/staging PostgreSQL. `S`
-- [ ] `P9-03` Implement Drizzle repositories behind existing contracts. `M`
-- [ ] `P9-04` Run repository and tenant-isolation suites against PostgreSQL. `M`
-- [ ] `P9-05` Configure Better Auth Drizzle adapter and migrations. `M`
-- [ ] `P9-06` Add transactions for service mutation plus audit. `M`
-- [ ] `P9-07` Select/provision S3-compatible object storage. `S`
-- [ ] `P9-08` Implement object-storage adapter and signed access. `M`
-- [ ] `P9-09` Add malware-scanning/quarantine workflow for files. `M`
-- [ ] `P9-10` Add backup, restore, and migration rollback runbooks. `M`
-- [ ] `P9-11` Integrate Stripe customer/subscription webhooks behind `BillingProvider`. `M`
-- [ ] `P9-12` Add checkout, portal, proration, and failed-payment lifecycle. `M`
-- [ ] `P9-13` Test webhook idempotency and entitlement synchronization. `M`
-- [ ] `P9-14` Add production email provider/templates. `M`
-- [ ] `P9-15` Add observability, alerting, retention, and incident runbook. `M`
-- [ ] `P9-16` Perform staging migration/restore/recovery rehearsal. `M`
+The original Phase 9 deferred persistence and identity until after a fully wired in-memory backend. That order is no longer active. Authentication, PostgreSQL persistence, private Storage, user management, and test entitlements are now promoted into the immediate hosted-development milestone.
+
+Use the `H0`–`H6` backlog in [Current State and Hosted Development Roadmap](./CURRENT_STATE_AND_HOSTED_ROADMAP.md) instead. Stripe checkout, production email delivery, malware scanning, paid hosting, production backups, observability, and incident operations remain later productionization work.
 
 ## 15. Milestones and rough effort
 
@@ -1376,22 +1417,22 @@ Privacy note: product analytics must use documented events and should not copy t
 
 ## 18. Decisions needed before execution
 
-The following defaults are recommended so execution can proceed without blocking:
+The local-prototype defaults were accepted and produced the current working interface. The next execution gate requires approval of these recommended hosted-development defaults:
 
-1. Use one seeded local workspace and actor with no login in the current phase.
-2. Target small residential builders first while keeping Personal useful.
-3. Use DHTMLX Gantt Community v10+ with the documented spike/fallback.
-4. Defer Better Auth, roles, invitations, and sessions until persistent multi-user work.
-5. Keep pricing in this plan, but do not build billing screens or enforcement yet.
-6. Make duration-weighted progress and the schedule-status rules in Section 6 the defaults.
-7. Copy planned structure, not comments/files/actual costs, during duplication.
-8. Treat the first runtime as a resettable desktop demo, never a production datastore.
+1. Use Supabase Free for the personal development PostgreSQL database, authentication, and initial private file storage.
+2. Use Supabase Auth instead of the earlier Better Auth proposal so sessions, PostgreSQL RLS, and Storage identity share one platform.
+3. Keep Drizzle ORM as the code-first schema, migration, and server data-access layer.
+4. Give AI tooling project-scoped Supabase MCP access, limit writes to reviewed development migrations, and never point it at future production customer data.
+5. Use Supabase Storage initially; keep Cloudflare R2 behind `FileStorage` as the next option when media exceeds free limits.
+6. Implement plan definitions, test subscriptions, usage meters, and server-enforced limits before introducing Stripe or real charges.
+7. Use Vercel Hobby only for optional personal/non-commercial previews; choose a commercial hosting plan before paid SaaS operation.
+8. Treat the existing React memory state as replaceable prototype state, not a backend or migration source.
 
-These defaults were accepted through review comments. Execution begins at `P0-05`; `P0-01` through `P0-04` are complete.
+Detailed acceptance criteria, tasks, free-tier limits, and current implementation status are in [Current State and Hosted Development Roadmap](./CURRENT_STATE_AND_HOSTED_ROADMAP.md).
 
 ## 19. Research references
 
-Checked on 2026-07-04:
+Originally checked on 2026-07-04; hosted-platform references rechecked on 2026-07-14:
 
 - [Next.js App Router](https://nextjs.org/docs/app)
 - [Better Auth Next.js integration](https://better-auth.com/docs/integrations/next)
@@ -1404,3 +1445,12 @@ Checked on 2026-07-04:
 - [Procore official pricing model](https://www.procore.com/pricing)
 - [Buildertrend official pricing model](https://buildertrend.com/pricing/)
 - [Fieldwire construction-management pricing overview](https://www.fieldwire.com/blog/construction-management-software-pricing/)
+- [Supabase pricing and Free limits](https://supabase.com/pricing)
+- [Supabase Auth with Next.js](https://supabase.com/docs/guides/auth/quickstarts/nextjs)
+- [Supabase Storage access control](https://supabase.com/docs/guides/storage/security/access-control)
+- [Supabase MCP server](https://supabase.com/docs/guides/ai-tools/mcp)
+- [Drizzle with Supabase](https://orm.drizzle.team/docs/connect-supabase)
+- [Drizzle Row Level Security](https://orm.drizzle.team/docs/rls)
+- [Cloudflare R2 pricing](https://developers.cloudflare.com/r2/pricing/)
+- [Neon pricing](https://neon.com/pricing)
+- [Vercel Hobby plan](https://vercel.com/docs/plans/hobby)

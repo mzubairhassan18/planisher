@@ -14,7 +14,7 @@ import { useLocalStore } from "@/components/local-store";
 import { MetricCard } from "@/components/metric-card";
 import { ProjectWorkspace } from "@/components/project-workspace";
 import { StatusBadge } from "@/components/status-badge";
-import { getMember, localToday } from "@/lib/mock-data";
+import { localToday } from "@/lib/local-date";
 import {
   calculateProjectProgress,
   getLeafTasks,
@@ -191,7 +191,7 @@ function ProjectFiles({ projectId }: { projectId: string }) {
 }
 
 function ProjectActivity({ projectId }: { projectId: string }) {
-  const { activity, openActivity } = useLocalStore();
+  const { activity, currentUser, members, openActivity } = useLocalStore();
   const projectActivity = activity.filter(
     (item) => item.projectId === projectId,
   );
@@ -206,8 +206,10 @@ function ProjectActivity({ projectId }: { projectId: string }) {
           </div>
         </div>
         <div className="activity-timeline">
-          {projectActivity.map((item) => {
-            const member = getMember(item.actorId);
+          {projectActivity.length ? projectActivity.map((item) => {
+            const member =
+              members.find((candidate) => candidate.id === item.actorId) ??
+              currentUser;
             return (
               <button
                 key={item.id}
@@ -218,11 +220,11 @@ function ProjectActivity({ projectId }: { projectId: string }) {
                   className="avatar"
                   style={{ backgroundColor: member?.color }}
                 >
-                  {member?.initials ?? "AK"}
+                  {member.initials}
                 </span>
                 <span>
                   <strong>
-                    {member?.name ?? "Local user"} {item.action}
+                    {member.name} {item.action}
                   </strong>
                   <p>{item.detail}</p>
                   <small>{new Date(item.occurredAt).toLocaleString()}</small>
@@ -230,7 +232,13 @@ function ProjectActivity({ projectId }: { projectId: string }) {
                 <ArrowRight aria-hidden="true" size={15} />
               </button>
             );
-          })}
+          }) : (
+            <div className="empty-section">
+              <FolderOpen aria-hidden="true" size={28} />
+              <strong>No activity yet</strong>
+              <span>Changes to this project will appear here.</span>
+            </div>
+          )}
         </div>
       </section>
     </div>

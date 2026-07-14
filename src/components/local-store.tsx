@@ -8,10 +8,6 @@ import {
   useState,
 } from "react";
 
-import {
-  activity as seededActivity,
-  projects as seededProjects,
-} from "@/lib/mock-data";
 import type {
   ActivityItem,
   BudgetLine,
@@ -20,6 +16,7 @@ import type {
   ProjectFile,
   ProjectTask,
   ProjectTemplate,
+  TeamMember,
   TaskComment,
 } from "@/lib/types";
 
@@ -83,6 +80,8 @@ interface CreateCostEntryInput {
 }
 
 interface LocalStoreValue {
+  currentUser: TeamMember;
+  members: TeamMember[];
   projects: Project[];
   templates: ProjectTemplate[];
   comments: TaskComment[];
@@ -138,86 +137,28 @@ function makeId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-function cloneSeedProjects() {
-  return structuredClone(seededProjects);
-}
-
-function cloneSeedTemplates(): ProjectTemplate[] {
-  const source = seededProjects[0];
-  return [
-    {
-      id: "template-two-storey-home",
-      name: "Two-storey home baseline",
-      sourceProjectId: source.id,
-      description:
-        "A reusable residential sequence from site preparation through structural frame.",
-      tasks: source.tasks.map((task) => ({ ...structuredClone(task), progress: 0 })),
-      dependencies: structuredClone(source.dependencies),
-      createdAt: "2026-07-01T08:00:00.000Z",
-    },
-  ];
-}
-
-function cloneSeedBudgetLines(): BudgetLine[] {
-  return seededProjects.map((project) => ({
-    id: `budget-baseline-${project.id}`,
-    projectId: project.id,
-    category: "Project baseline",
-    description: `${project.name} approved plan`,
-    plannedMinor: project.budgetMinor,
-    createdAt: "2026-07-01T08:00:00.000Z",
-  }));
-}
-
-function cloneSeedCostEntries(): CostEntry[] {
-  return seededProjects.map((project) => ({
-    id: `cost-recorded-${project.id}`,
-    projectId: project.id,
-    budgetLineId: `budget-baseline-${project.id}`,
-    type: "actual",
-    description: "Recorded project spend to date",
-    vendor: "Multiple vendors",
-    amountMinor: project.spentMinor,
-    occurredOn: "2026-07-04",
-    createdAt: "2026-07-04T08:00:00.000Z",
-  }));
-}
-
 function shiftDate(date: string, offsetDays: number) {
   const shifted = new Date(`${date}T12:00:00.000Z`);
   shifted.setUTCDate(shifted.getUTCDate() + offsetDays);
   return shifted.toISOString().slice(0, 10);
 }
 
-export function LocalStoreProvider({ children }: { children: React.ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>(cloneSeedProjects);
-  const [templates, setTemplates] =
-    useState<ProjectTemplate[]>(cloneSeedTemplates);
+export function LocalStoreProvider({
+  children,
+  currentUser,
+}: {
+  children: React.ReactNode;
+  currentUser: TeamMember;
+}) {
+  const actorId = currentUser.id;
+  const members = useMemo(() => [currentUser], [currentUser]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
-  const [budgetLines, setBudgetLines] =
-    useState<BudgetLine[]>(cloneSeedBudgetLines);
-  const [costEntries, setCostEntries] =
-    useState<CostEntry[]>(cloneSeedCostEntries);
-  const [files, setFiles] = useState<ProjectFile[]>([
-    {
-      id: "file-1",
-      projectId: "riverside-villa",
-      name: "foundation-inspection.pdf",
-      sizeBytes: 1_840_000,
-      type: "application/pdf",
-      uploadedAt: "2026-07-03T09:20:00.000Z",
-    },
-    {
-      id: "file-2",
-      projectId: "riverside-villa",
-      name: "drainage-detail.dwg",
-      sizeBytes: 3_210_000,
-      type: "application/acad",
-      uploadedAt: "2026-07-02T13:10:00.000Z",
-    },
-  ]);
-  const [activity, setActivity] =
-    useState<ActivityItem[]>(structuredClone(seededActivity));
+  const [budgetLines, setBudgetLines] = useState<BudgetLine[]>([]);
+  const [costEntries, setCostEntries] = useState<CostEntry[]>([]);
+  const [files, setFiles] = useState<ProjectFile[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [dialog, setDialog] = useState<DialogState>(null);
 
   const closeDialog = useCallback(() => setDialog(null), []);
@@ -291,7 +232,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
             dependency.targetTaskId,
         })) ?? [];
       const teamIds = Array.from(
-        new Set(["member-1", ...tasks.flatMap((task) => task.assigneeIds)]),
+        new Set([actorId, ...tasks.flatMap((task) => task.assigneeIds)]),
       );
       const project: Project = {
         id,
@@ -327,7 +268,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         {
           id: makeId("activity"),
           projectId: id,
-          actorId: "member-1",
+          actorId,
           action: "created a project",
           detail: template
             ? `${input.name} reused ${template.tasks.length} tasks from ${template.name}.`
@@ -339,7 +280,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       ]);
       return id;
     },
-    [templates],
+    [actorId, templates],
   );
 
   const duplicateProject = useCallback(
@@ -395,7 +336,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         {
           id: makeId("activity"),
           projectId: id,
-          actorId: "member-1",
+          actorId,
           action: "duplicated a project",
           detail: `${copy.name} was copied from ${source.name} with progress reset.`,
           targetType: "project",
@@ -405,7 +346,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       ]);
       return id;
     },
-    [projects],
+    [actorId, projects],
   );
 
   const deleteProject = useCallback((projectId: string) => {
@@ -462,7 +403,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         {
           id: makeId("activity"),
           projectId,
-          actorId: "member-1",
+          actorId,
           action: "added a task",
           detail: `${input.title} was added to the schedule.`,
           targetType: "task",
@@ -473,7 +414,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       ]);
       return id;
     },
-    [projects],
+    [actorId, projects],
   );
 
   const updateTask = useCallback(
@@ -519,7 +460,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
           {
             id: makeId("activity"),
             projectId,
-            actorId: "member-1",
+            actorId,
             action: "updated progress",
             detail: `${taskTitle} moved to ${patch.progress}%.`,
             targetType: "task",
@@ -530,7 +471,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         ]);
       }
     },
-    [],
+    [actorId],
   );
 
   const addComment = useCallback(
@@ -548,7 +489,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         id: makeId("comment"),
         projectId,
         taskId,
-        authorId: "member-1",
+        authorId: actorId,
         kind,
         body: normalizedBody,
         attachments: mediaFiles.map((file) => ({
@@ -566,7 +507,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         {
           id: makeId("activity"),
           projectId,
-          actorId: "member-1",
+          actorId,
           action: kind === "issue" ? "raised a problem" : "added a comment",
           detail:
             normalizedBody ||
@@ -581,7 +522,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         ...current,
       ]);
     },
-    [],
+    [actorId],
   );
 
   const addFile = useCallback((projectId: string, file: File) => {
@@ -600,7 +541,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       {
         id: makeId("activity"),
         projectId,
-        actorId: "member-1",
+        actorId,
         action: "added a file",
         detail: file.name,
         targetType: "file",
@@ -608,7 +549,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       },
       ...current,
     ]);
-  }, []);
+  }, [actorId]);
 
   const addBudgetLine = useCallback((input: CreateBudgetLineInput) => {
     const id = makeId("budget-line");
@@ -637,7 +578,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       {
         id: makeId("activity"),
         projectId: input.projectId,
-        actorId: "member-1",
+        actorId,
         action: "added a budget line",
         detail: `${line.description} planned at ${(
           input.plannedMinor / 100
@@ -649,7 +590,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       ...current,
     ]);
     return id;
-  }, []);
+  }, [actorId]);
 
   const addCostEntry = useCallback((input: CreateCostEntryInput) => {
     const id = makeId("cost-entry");
@@ -683,7 +624,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       {
         id: makeId("activity"),
         projectId: input.projectId,
-        actorId: "member-1",
+        actorId,
         action:
           input.type === "actual"
             ? "recorded an expense"
@@ -698,7 +639,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       ...current,
     ]);
     return id;
-  }, []);
+  }, [actorId]);
 
   const createTemplate = useCallback(
     (input: CreateTemplateInput) => {
@@ -723,7 +664,7 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
         {
           id: makeId("activity"),
           projectId: source.id,
-          actorId: "member-1",
+          actorId,
           action: "created a template",
           detail: `${input.name} was created from ${source.name}.`,
           targetType: "project",
@@ -733,11 +674,13 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       ]);
       return id;
     },
-    [projects],
+    [actorId, projects],
   );
 
   const value = useMemo<LocalStoreValue>(
     () => ({
+      currentUser,
+      members,
       projects,
       templates,
       comments,
@@ -767,6 +710,8 @@ export function LocalStoreProvider({ children }: { children: React.ReactNode }) 
       addCostEntry,
     }),
     [
+      currentUser,
+      members,
       projects,
       templates,
       comments,

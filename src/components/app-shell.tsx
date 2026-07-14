@@ -11,17 +11,27 @@ import {
   FolderKanban,
   LayoutDashboard,
   Library,
+  LogOut,
   Search,
   Settings,
   Sparkles,
   UserRound,
 } from "lucide-react";
 
+import { signOutAction } from "@/app/auth/actions";
 import { NewProjectButton } from "@/components/action-buttons";
 import { LocaleSummary } from "@/components/locale-summary";
 import { useLocalStore } from "@/components/local-store";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  user,
+  workspaceName,
+}: {
+  children: React.ReactNode;
+  user: { email: string; name: string };
+  workspaceName: string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { projects } = useLocalStore();
@@ -31,6 +41,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const primaryProjectId = projects[0]?.id;
+  const initials = user.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
   const scheduleHref = primaryProjectId
     ? `/app/projects/${primaryProjectId}/schedule`
     : "/app/projects";
@@ -142,10 +158,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => setSwitcherOpen((open) => !open)}
             type="button"
           >
-            <span className="workspace-monogram">CH</span>
+            <span className="workspace-monogram">{initials || "P"}</span>
             <span>
-              <strong>CraftHaus</strong>
-              <small>Local workspace</small>
+              <strong>{workspaceName}</strong>
+              <small>{user.email}</small>
             </span>
             <ChevronDown
               aria-hidden="true"
@@ -156,17 +172,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {switcherOpen ? (
             <div className="workspace-menu" role="menu">
               <span className="workspace-menu-label">Open a project</span>
-              {projects.slice(0, 6).map((project) => (
-                <Link
-                  href={`/app/projects/${project.id}/overview`}
-                  key={project.id}
-                  onClick={() => setSwitcherOpen(false)}
-                  role="menuitem"
-                >
-                  <span>{project.code}</span>
-                  {project.name}
-                </Link>
-              ))}
+              {projects.length ? (
+                projects.slice(0, 6).map((project) => (
+                  <Link
+                    href={`/app/projects/${project.id}/overview`}
+                    key={project.id}
+                    onClick={() => setSwitcherOpen(false)}
+                    role="menuitem"
+                  >
+                    <span>{project.code}</span>
+                    {project.name}
+                  </Link>
+                ))
+              ) : (
+                <span className="workspace-menu-label">No projects yet</span>
+              )}
               <Link
                 href="/app/projects"
                 onClick={() => setSwitcherOpen(false)}
@@ -202,8 +222,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="demo-note">
           <Sparkles aria-hidden="true" size={16} />
           <span>
-            <strong>Local demo</strong>
-            Data resets on restart
+            <strong>Development build</strong>
+            Project data is temporary
           </span>
         </div>
 
@@ -281,11 +301,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
             >
               <span className="topbar-avatar" aria-hidden="true">
-                AK
+                {initials || "PU"}
               </span>
               <span className="topbar-user-copy">
-                <strong>Amina Khan</strong>
-                <small>Project lead</small>
+                <strong>{user.name}</strong>
+                <small>{user.email}</small>
               </span>
               <ChevronDown
                 aria-hidden="true"
@@ -295,7 +315,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
             {userMenuOpen ? (
               <div className="topbar-user-menu" role="menu">
-                <span className="workspace-menu-label">Local demo account</span>
+                <span className="workspace-menu-label">Signed-in account</span>
                 <Link
                   href="/app"
                   onClick={() => setUserMenuOpen(false)}
@@ -312,10 +332,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <UserRound aria-hidden="true" size={15} />
                   Profile and preferences
                 </Link>
-                <div className="local-session-note">
-                  <Sparkles aria-hidden="true" size={14} />
-                  Signed in locally · no login required
-                </div>
+                <form action={signOutAction}>
+                  <button className="user-menu-signout" role="menuitem" type="submit">
+                    <LogOut aria-hidden="true" size={15} />
+                    Sign out
+                  </button>
+                </form>
               </div>
             ) : null}
           </div>

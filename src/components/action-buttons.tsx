@@ -45,12 +45,19 @@ export function NewTaskButton({
 }
 
 export function NewTemplateButton() {
-  const { openNewTemplate } = useLocalStore();
+  const { openNewTemplate, projects } = useLocalStore();
+  const canCreateTemplate = projects.length > 0;
 
   return (
     <button
       className="primary-button"
+      disabled={!canCreateTemplate}
       onClick={() => openNewTemplate()}
+      title={
+        canCreateTemplate
+          ? "Create a reusable template"
+          : "Create a project before saving a template"
+      }
       type="button"
     >
       <CopyPlus aria-hidden="true" size={17} />

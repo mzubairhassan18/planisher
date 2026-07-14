@@ -39,7 +39,10 @@ export default function LocalSettingsPage() {
           <HardDrive aria-hidden="true" size={22} />
           <div>
             <h2>Storage</h2>
-            <p>Mock data currently lives in the application bundle.</p>
+            <p>
+              Authentication uses Supabase. Project data is temporarily held in
+              browser memory until the persistence wiring is complete.
+            </p>
             <span className="local-pill">Local only</span>
           </div>
         </article>
@@ -47,7 +50,10 @@ export default function LocalSettingsPage() {
           <RotateCcw aria-hidden="true" size={22} />
           <div>
             <h2>Reset behavior</h2>
-            <p>Server restarts restore the seeded CraftHaus workspace.</p>
+            <p>
+              A refresh clears temporary project data. No sample projects,
+              tasks, files, costs, or team members are created automatically.
+            </p>
           </div>
         </article>
       </div>

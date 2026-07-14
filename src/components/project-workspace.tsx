@@ -14,7 +14,7 @@ import {
 import { AvatarStack } from "@/components/avatar-stack";
 import { useLocalStore } from "@/components/local-store";
 import { StatusBadge } from "@/components/status-badge";
-import { localToday, team } from "@/lib/mock-data";
+import { localToday } from "@/lib/local-date";
 import {
   calculateProjectProgress,
   getProjectScheduleStatus,
@@ -45,13 +45,16 @@ export function ProjectWorkspace({
   const router = useRouter();
   const {
     duplicateProject,
+    members: workspaceMembers,
     openDeleteProject,
     openNewTemplate,
   } = useLocalStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const progress = calculateProjectProgress(project.tasks);
   const status = getProjectScheduleStatus(project, localToday);
-  const members = team.filter((member) => project.teamIds.includes(member.id));
+  const members = workspaceMembers.filter((member) =>
+    project.teamIds.includes(member.id),
+  );
 
   return (
     <div className="schedule-page">

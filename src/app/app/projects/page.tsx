@@ -12,7 +12,7 @@ import {
 import { NewProjectButton } from "@/components/action-buttons";
 import { useLocalStore } from "@/components/local-store";
 import { ProjectCard } from "@/components/project-card";
-import { localToday } from "@/lib/mock-data";
+import { localToday } from "@/lib/local-date";
 import { getProjectScheduleStatus } from "@/lib/progress";
 import type { ScheduleStatus } from "@/lib/types";
 
@@ -147,18 +147,26 @@ export default function ProjectsPage() {
       ) : (
         <article className="content-card project-empty-results">
           <FolderSearch aria-hidden="true" size={28} />
-          <h2>No projects match</h2>
-          <p>Try another search or return the status filter to all projects.</p>
-          <button
-            className="secondary-button"
-            onClick={() => {
-              setQuery("");
-              setStatusFilter("all");
-            }}
-            type="button"
-          >
-            Clear filters
-          </button>
+          <h2>{projects.length ? "No projects match" : "No projects yet"}</h2>
+          <p>
+            {projects.length
+              ? "Try another search or return the status filter to all projects."
+              : "Create your first project to start planning tasks, costs, and progress."}
+          </p>
+          {projects.length ? (
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setQuery("");
+                setStatusFilter("all");
+              }}
+              type="button"
+            >
+              Clear filters
+            </button>
+          ) : (
+            <NewProjectButton />
+          )}
         </article>
       )}
     </div>

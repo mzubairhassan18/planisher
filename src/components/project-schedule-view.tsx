@@ -7,7 +7,7 @@ import { NewTaskButton } from "@/components/action-buttons";
 import { useLocalStore } from "@/components/local-store";
 import { ProjectWorkspace } from "@/components/project-workspace";
 import { ScheduleGantt } from "@/components/schedule-gantt";
-import { localToday } from "@/lib/mock-data";
+import { localToday } from "@/lib/local-date";
 
 export function ProjectScheduleView({
   projectId,

@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 
 import { useLocalStore } from "@/components/local-store";
-import { getMember, team } from "@/lib/mock-data";
 import { getTaskScheduleStatus } from "@/lib/progress";
 
 function DialogFrame({
@@ -201,7 +200,7 @@ function NewProjectDialog() {
 }
 
 function NewTaskDialog({ projectId }: { projectId: string }) {
-  const { addTask, closeDialog, projects } = useLocalStore();
+  const { addTask, closeDialog, members, projects } = useLocalStore();
   const project = projects.find((item) => item.id === projectId);
 
   if (!project) return null;
@@ -260,7 +259,7 @@ function NewTaskDialog({ projectId }: { projectId: string }) {
           <Field label="Assignee">
             <select name="assigneeId">
               <option value="">Unassigned</option>
-              {team.map((member) => (
+              {members.map((member) => (
                 <option key={member.id} value={member.id}>
                   {member.name}
                 </option>
@@ -311,7 +310,7 @@ function NewTemplateDialog() {
           <input
             autoFocus
             name="name"
-            placeholder="Two-storey home baseline"
+            placeholder="Residential build template"
             required
           />
         </Field>
@@ -615,7 +614,8 @@ function CostEntryDialog({
 
 function ActivityDrawer({ activityId }: { activityId: string }) {
   const router = useRouter();
-  const { activity, closeDialog, projects } = useLocalStore();
+  const { activity, closeDialog, currentUser, members, projects } =
+    useLocalStore();
   const item = activity.find((candidate) => candidate.id === activityId);
   const project = projects.find(
     (candidate) => candidate.id === item?.projectId,
@@ -625,7 +625,8 @@ function ActivityDrawer({ activityId }: { activityId: string }) {
   );
   if (!item || !project) return null;
 
-  const member = getMember(item.actorId);
+  const member =
+    members.find((candidate) => candidate.id === item.actorId) ?? currentUser;
   const destination = item.taskId
     ? `/app/projects/${project.id}/schedule?task=${encodeURIComponent(
         item.taskId,
@@ -682,11 +683,11 @@ function ActivityDrawer({ activityId }: { activityId: string }) {
             className="avatar"
             style={{ backgroundColor: member?.color }}
           >
-            {member?.initials ?? "AK"}
+            {member.initials}
           </span>
           <span>
-            <strong>{member?.name ?? "Local user"}</strong>
-            <small>{member?.role ?? "Workspace member"}</small>
+            <strong>{member.name}</strong>
+            <small>{member.role}</small>
           </span>
         </div>
         <div className="drawer-section">
@@ -755,6 +756,8 @@ function TaskDrawer({
     closeDialog,
     comments,
     costEntries,
+    currentUser,
+    members,
     openBudgetLine,
     openCostEntry,
     projects,
@@ -937,7 +940,7 @@ function TaskDrawer({
                 value={assigneeId}
               >
                 <option value="">Unassigned</option>
-                {team.map((member) => (
+                {members.map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.name} · {member.role}
                   </option>
@@ -1036,7 +1039,11 @@ function TaskDrawer({
           ) : null}
           <div className="comment-list">
             {taskComments.length ? (
-              taskComments.map((comment) => (
+              taskComments.map((comment) => {
+                const author =
+                  members.find((member) => member.id === comment.authorId) ??
+                  currentUser;
+                return (
                 <article
                   className={[
                     "comment",
@@ -1048,10 +1055,15 @@ function TaskDrawer({
                   id={`comment-${comment.id}`}
                   key={comment.id}
                 >
-                  <span className="avatar">AK</span>
+                  <span
+                    className="avatar"
+                    style={{ backgroundColor: author.color }}
+                  >
+                    {author.initials}
+                  </span>
                   <div>
                     <strong>
-                      Amina Khan
+                      {author.name}
                       {comment.kind === "issue" ? (
                         <em className="issue-label">
                           <AlertTriangle aria-hidden="true" size={11} />
@@ -1095,7 +1107,8 @@ function TaskDrawer({
                     <small>Just now</small>
                   </div>
                 </article>
-              ))
+                );
+              })
             ) : (
               <p className="empty-copy">
                 No updates yet. Share progress or raise a problem.

@@ -14,7 +14,7 @@ import { NewProjectButton } from "@/components/action-buttons";
 import { useLocalStore } from "@/components/local-store";
 import { MetricCard } from "@/components/metric-card";
 import { ProjectCard } from "@/components/project-card";
-import { getMember, localToday } from "@/lib/mock-data";
+import { localToday } from "@/lib/local-date";
 import {
   countTasksByStatus,
   getLeafTasks,
@@ -22,27 +22,49 @@ import {
 } from "@/lib/progress";
 
 export default function DashboardPage() {
-  const { activity, openActivity, projects } = useLocalStore();
+  const { activity, currentUser, members, openActivity, projects } =
+    useLocalStore();
   const activeTasks = projects.flatMap((project) =>
     getLeafTasks(project.tasks),
   );
   const delayedTasks = countTasksByStatus(projects, "delayed", localToday);
   const completedTasks = countTasksByStatus(projects, "completed", localToday);
+  const todayDate = localToday.toISOString().slice(0, 10);
+  const weekEnd = new Date(localToday);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekEndDate = weekEnd.toISOString().slice(0, 10);
   const dueThisWeek = activeTasks.filter((task) => {
     const status = getTaskScheduleStatus(task, localToday);
     return (
       status !== "completed" &&
-      task.endDate >= "2026-07-04" &&
-      task.endDate <= "2026-07-11"
+      task.endDate >= todayDate &&
+      task.endDate <= weekEndDate
     );
   }).length;
+  const delayedItems = projects
+    .flatMap((project) =>
+      getLeafTasks(project.tasks).map((task) => ({ project, task })),
+    )
+    .filter(
+      ({ task }) => getTaskScheduleStatus(task, localToday) === "delayed",
+    )
+    .slice(0, 4);
+  const firstName = currentUser.name.split(/\s+/)[0] || "there";
+  const hour = localToday.getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const formattedDate = new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(localToday);
 
   return (
     <div className="dashboard-page">
       <header className="page-heading heading-with-action">
         <div>
-          <span className="eyebrow">Saturday, 4 July</span>
-          <h1>Good afternoon, Amina.</h1>
+          <span className="eyebrow">{formattedDate}</span>
+          <h1>{greeting}, {firstName}.</h1>
           <p>Here is what needs your attention across the build programme.</p>
         </div>
         <NewProjectButton />
@@ -52,7 +74,7 @@ export default function DashboardPage() {
         <MetricCard
           label="Active projects"
           value={String(projects.length)}
-          note="Across three cities"
+          note={projects.length ? "In this workspace" : "Create your first project"}
           icon={FolderKanban}
           tone="blue"
         />
@@ -90,9 +112,18 @@ export default function DashboardPage() {
           </Link>
         </div>
         <div className="project-grid">
-          {projects.map((project) => (
-            <ProjectCard project={project} today={localToday} key={project.id} />
-          ))}
+          {projects.length ? (
+            projects.map((project) => (
+              <ProjectCard project={project} today={localToday} key={project.id} />
+            ))
+          ) : (
+            <article className="content-card placeholder-card">
+              <FolderKanban aria-hidden="true" size={28} />
+              <h2>No projects yet</h2>
+              <p>Create a blank project to begin building your schedule.</p>
+              <NewProjectButton />
+            </article>
+          )}
         </div>
       </section>
 
@@ -105,16 +136,8 @@ export default function DashboardPage() {
             </div>
             <span className="attention-count">{delayedTasks}</span>
           </div>
-          {projects
-            .flatMap((project) =>
-              getLeafTasks(project.tasks).map((task) => ({ project, task })),
-            )
-            .filter(
-              ({ task }) =>
-                getTaskScheduleStatus(task, localToday) === "delayed",
-            )
-            .slice(0, 4)
-            .map(({ project, task }) => (
+          {delayedItems.length ? (
+            delayedItems.map(({ project, task }) => (
               <Link
                 className="attention-row"
                 href={`/app/projects/${project.id}/schedule?task=${encodeURIComponent(task.id)}`}
@@ -129,7 +152,14 @@ export default function DashboardPage() {
                 </span>
                 <span>{task.progress}%</span>
               </Link>
-            ))}
+            ))
+          ) : (
+            <div className="empty-section">
+              <CalendarCheck2 aria-hidden="true" size={28} />
+              <strong>No tasks need attention</strong>
+              <span>Delayed work will appear here.</span>
+            </div>
+          )}
         </article>
 
         <article className="content-card activity-card">
@@ -139,8 +169,8 @@ export default function DashboardPage() {
               <h2>Recent activity</h2>
             </div>
           </div>
-          {activity.map((item) => {
-            const member = getMember(item.actorId);
+          {activity.length ? activity.map((item) => {
+            const member = members.find((candidate) => candidate.id === item.actorId);
             const project = projects.find(
               (candidate) => candidate.id === item.projectId,
             );
@@ -156,11 +186,11 @@ export default function DashboardPage() {
                   className="avatar"
                   style={{ backgroundColor: member?.color }}
                 >
-                  {member?.initials}
+                  {member?.initials ?? currentUser.initials}
                 </span>
                 <span>
                   <strong>
-                    {member?.name} {item.action}
+                    {member?.name ?? currentUser.name} {item.action}
                   </strong>
                   <small>{item.detail}</small>
                   <em>{project?.name} · recently</em>
@@ -172,7 +202,13 @@ export default function DashboardPage() {
                 />
               </button>
             );
-          })}
+          }) : (
+            <div className="empty-section">
+              <Clock3 aria-hidden="true" size={28} />
+              <strong>No activity yet</strong>
+              <span>Project and task updates will appear here.</span>
+            </div>
+          )}
         </article>
 
         <article className="content-card budget-glance">
@@ -180,10 +216,11 @@ export default function DashboardPage() {
             <CircleDollarSign aria-hidden="true" size={21} />
           </div>
           <span className="eyebrow">Cost overview</span>
-          <h2>Budgets are steady</h2>
+          <h2>{projects.length ? "Budgets are ready" : "No budget data yet"}</h2>
           <p>
-            Total recorded spend is below the planned portfolio curve. Open the
-            budget workspace for detail.
+            {projects.length
+              ? "Open the budget workspace to review planned and recorded costs."
+              : "Create a project and add its planned budget when you are ready."}
           </p>
           <Link className="text-link" href="/app/budget">
             Review budgets

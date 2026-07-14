@@ -14,7 +14,6 @@ import {
 import { AvatarStack } from "@/components/avatar-stack";
 import { useLocalStore } from "@/components/local-store";
 import { StatusBadge } from "@/components/status-badge";
-import { team } from "@/lib/mock-data";
 import {
   calculateProjectProgress,
   getProjectScheduleStatus,
@@ -29,11 +28,17 @@ export function ProjectCard({
   today: Date;
 }) {
   const router = useRouter();
-  const { duplicateProject, openDeleteProject } = useLocalStore();
+  const {
+    duplicateProject,
+    members: workspaceMembers,
+    openDeleteProject,
+  } = useLocalStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const progress = calculateProjectProgress(project.tasks);
   const status = getProjectScheduleStatus(project, today);
-  const members = team.filter((member) => project.teamIds.includes(member.id));
+  const members = workspaceMembers.filter((member) =>
+    project.teamIds.includes(member.id),
+  );
 
   return (
     <article className="project-card">
