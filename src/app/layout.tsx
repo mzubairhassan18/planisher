@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "dhtmlx-gantt/codebase/dhtmlxgantt.css";
 
@@ -17,9 +17,18 @@ export const metadata: Metadata = {
     "A calm construction planning workspace for schedules, progress, and cost.",
 };
 
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f7f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#16231e" },
+  ],
+};
+
 const themeScript = `
   try {
-    const preference = localStorage.getItem("planisher-theme") || "system";
+    const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    const preference = standalone ? "system" : (localStorage.getItem("planisher-theme") || "system");
     const theme = preference === "system"
       ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
       : preference;

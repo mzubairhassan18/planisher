@@ -13,12 +13,13 @@ export function NewProjectButton({
 
   return (
     <button
-      className={className}
+      aria-label="Create a new project"
+      className={`${className} new-project-button`}
       onClick={() => openNewProject()}
       type="button"
     >
       <Plus aria-hidden="true" size={17} />
-      New project
+      <span>New project</span>
     </button>
   );
 }

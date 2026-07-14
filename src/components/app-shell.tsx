@@ -248,6 +248,7 @@ export function AppShell({
 
       <div className="app-main">
         <MobileAppChrome
+          userEmail={user.email}
           userName={user.name}
           workspaceName={workspaceName}
         />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { Globe2, HardDrive, RotateCcw } from "lucide-react";
+import { Cloud, Globe2, HardDrive } from "lucide-react";
 
 import { PasskeySettingsCard } from "@/components/passkey-controls";
 
@@ -21,9 +21,9 @@ export default function LocalSettingsPage() {
   return (
     <div>
       <header className="page-heading">
-        <span className="eyebrow">Development</span>
-        <h1>Local settings</h1>
-        <p>Transparent defaults for this browser and local workspace.</p>
+        <span className="eyebrow">Account and device</span>
+        <h1>Settings</h1>
+        <p>Security, locale, and a clear view of what is currently saved.</p>
       </header>
       <div className="settings-grid">
         <PasskeySettingsCard />
@@ -39,24 +39,26 @@ export default function LocalSettingsPage() {
           </div>
         </article>
         <article className="content-card settings-card">
-          <HardDrive aria-hidden="true" size={22} />
+          <Cloud aria-hidden="true" size={22} />
           <div>
-            <h2>Storage</h2>
+            <h2>Saved in Supabase</h2>
             <p>
-              Authentication uses Supabase. Project data is temporarily held in
-              browser memory until the persistence wiring is complete.
+              Your account, profile, workspace membership, and published starter
+              templates are stored in the hosted Supabase backend.
             </p>
-            <span className="local-pill">Local only</span>
+            <span className="local-pill hosted">Hosted</span>
           </div>
         </article>
         <article className="content-card settings-card">
-          <RotateCcw aria-hidden="true" size={22} />
+          <HardDrive aria-hidden="true" size={22} />
           <div>
-            <h2>Reset behavior</h2>
+            <h2>Temporary in this release</h2>
             <p>
-              A refresh clears temporary project data. No sample projects,
-              tasks, files, costs, or team members are created automatically.
+              Projects you create, their tasks, comments, costs, cover images,
+              and uploaded media still live in browser memory and clear on refresh.
+              Do not use them for irreplaceable project records yet.
             </p>
+            <span className="local-pill">Not yet persisted</span>
           </div>
         </article>
       </div>

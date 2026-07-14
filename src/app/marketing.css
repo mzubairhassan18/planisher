@@ -21,14 +21,14 @@ body:has(.marketing-site) {
 .marketing-nav {
   position: fixed;
   top: 14px;
-  right: 22px;
-  left: 22px;
+  right: 7vw;
+  left: 7vw;
   z-index: 100;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 28px;
-  max-width: 1420px;
+  max-width: none;
   height: 64px;
   padding: 0 18px;
   margin: 0 auto;
@@ -123,7 +123,8 @@ body:has(.marketing-site) {
 
 .marketing-hero {
   position: relative;
-  min-height: 880px;
+  height: 100svh;
+  min-height: 680px;
   overflow: hidden;
   background:
     radial-gradient(circle at 76% 32%, rgba(255, 255, 255, 0.85), transparent 30%),
@@ -133,7 +134,11 @@ body:has(.marketing-site) {
 .building-scene {
   position: absolute;
   inset: 0 0 0 37%;
-  min-height: 760px;
+  min-height: 100%;
+}
+
+.building-scene[data-webgl="true"] .building-scene-fallback {
+  opacity: 0;
 }
 
 .building-scene canvas {
@@ -154,6 +159,25 @@ body:has(.marketing-site) {
   filter: drop-shadow(0 32px 32px rgba(35, 68, 52, 0.18));
   transform: perspective(900px) rotateY(-14deg) rotateX(2deg);
   transform-style: preserve-3d;
+  transition: opacity 300ms ease;
+}
+
+.building-scene-variant {
+  position: absolute;
+  right: 7vw;
+  bottom: 154px;
+  z-index: 3;
+  padding: 7px 11px;
+  color: #315d4b;
+  background: rgba(245, 249, 246, 0.76);
+  border: 1px solid rgba(23, 77, 58, 0.12);
+  border-radius: 999px;
+  box-shadow: 0 8px 30px rgba(18, 45, 34, 0.08);
+  backdrop-filter: blur(12px);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .fallback-floor {
@@ -234,9 +258,11 @@ body:has(.marketing-site) {
   position: relative;
   z-index: 2;
   display: grid;
+  min-height: 100%;
+  align-content: center;
   max-width: 710px;
   gap: 25px;
-  padding: 202px 5vw 110px 7vw;
+  padding: 118px 5vw 78px 7vw;
 }
 
 .marketing-kicker {
@@ -312,7 +338,7 @@ body:has(.marketing-site) {
 .marketing-hero-note {
   position: absolute;
   right: 7vw;
-  bottom: 74px;
+  bottom: 40px;
   z-index: 3;
   display: grid;
   min-width: 225px;
@@ -350,7 +376,9 @@ body:has(.marketing-site) {
   display: grid;
   grid-template-columns: minmax(280px, 0.65fr) minmax(560px, 1.35fr);
   align-items: center;
+  min-height: 100svh;
   gap: 6vw;
+  overflow: hidden;
   background: var(--marketing-cream);
 }
 
@@ -385,6 +413,7 @@ body:has(.marketing-site) {
   border: 1px solid rgba(23, 77, 58, 0.1);
   border-radius: 28px;
   box-shadow: 0 28px 70px rgba(32, 67, 53, 0.1);
+  will-change: transform;
 }
 
 .construction-strip svg {
@@ -395,7 +424,7 @@ body:has(.marketing-site) {
 
 .site-ground { fill: #8ba18f; }
 .site-skyline { fill: none; stroke: #5f7d6c; stroke-width: 4; }
-.site-truck { fill: #d49f32; animation: site-truck 8s linear infinite; }
+.site-truck { fill: #d49f32; }
 .site-truck circle { fill: #243a31; }
 .site-truck .wheel-hub { fill: #d5ded8; }
 .site-truck .truck-window { fill: #b8d5dc; }
@@ -821,6 +850,14 @@ body:has(.marketing-site) {
   .pricing-sticky-copy {
     position: static;
   }
+
+  .marketing-site-section {
+    min-height: auto;
+  }
+
+  .site-truck {
+    animation: site-truck 8s linear infinite;
+  }
 }
 
 @media (max-width: 760px) {
@@ -843,7 +880,8 @@ body:has(.marketing-site) {
   }
 
   .marketing-hero {
-    min-height: 790px;
+    height: 100svh;
+    min-height: 0;
   }
 
   .building-scene {
@@ -858,11 +896,11 @@ body:has(.marketing-site) {
 
   .marketing-hero-copy {
     gap: 18px;
-    padding: 130px 20px 300px;
+    padding: clamp(100px, 14svh, 130px) 20px clamp(170px, 25svh, 230px);
   }
 
   .marketing-hero h1 {
-    font-size: clamp(49px, 15vw, 68px);
+    font-size: clamp(42px, 14vw, 62px);
   }
 
   .marketing-hero-copy > p {
@@ -885,6 +923,10 @@ body:has(.marketing-site) {
     right: 18px;
     bottom: 25px;
     left: 18px;
+  }
+
+  .building-scene-variant {
+    display: none;
   }
 
   .marketing-site-section,

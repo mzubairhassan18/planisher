@@ -13,9 +13,9 @@ The current milestone combines the desktop planning prototype with a mobile-firs
 - Optional project cover images, nested subtask creation, project dashboard charts, live local time, search, filters, duplicate/delete actions, and workspace templates.
 - DHTMLX Gantt schedule with tasks, dependencies, progress, status colors, issue flags, and task focus links.
 - Editable task drawer with comments/problems and temporary image, audio, and video previews.
-- Installable mobile PWA with a compact dashboard, project list, searchable/filterable task list, hierarchy/dependency cues, field-focused task updates, activity navigation, and offline fallback.
+- Installable mobile PWA with a compact dashboard, project list, searchable/filterable task list, hierarchy/dependency cues, field-focused task updates, activity navigation, an account/logout menu, phone-synchronized light/dark appearance, and offline fallback.
 - Experimental mobile-PWA passkey controls for Face ID, fingerprint, device PIN, or security-key sign-in after Supabase Passkeys is enabled.
-- Public Planisher landing page with a Three.js construction scene, animated SVG site activity, GSAP reveals, capability carousel, outcome stories, pricing, contact form, and footer.
+- Public Planisher landing page with rotating residential, school, and high-rise Three.js builds, a scroll-controlled construction story, GSAP reveals, capability carousel, outcome stories, pricing, contact form, and footer. Signed-in visitors receive one Dashboard action instead of sign-in calls to action.
 - Project/task budget and expense entry in the local prototype store.
 - Browser-based timezone and currency detection.
 - Light, dark, and system themes; theme preference is remembered in the browser.
@@ -126,7 +126,7 @@ Built-in templates are migration-managed and read-only to application users. A u
 
 - Planisher detects the browser’s IANA timezone and derives a likely currency from locale/region data during setup. Users can review those values before saving them.
 - Exact construction-site location remains a project field because an account’s browser location is not a reliable substitute for the site address.
-- Theme defaults to the operating-system preference. Light, dark, and system choices are available from the account menu and stored only in the browser.
+- Theme defaults to the operating-system preference. Light, dark, and system choices are available from the desktop account menu and stored only in the browser. The installed PWA deliberately follows the phone theme so an operating-system appearance change is reflected immediately.
 - Dark mode uses a low-glare green-charcoal canvas rather than pure black while preserving Planisher’s primary green brand colors.
 
 ## PWA behavior
@@ -135,6 +135,7 @@ Built-in templates are migration-managed and read-only to application users. A u
 - Android/Chromium receives a dismissible install action only after `beforeinstallprompt` fires; iOS receives “Share → Add to Home Screen” guidance.
 - The service worker caches only the public shell/static assets and provides an offline page. Authenticated product records and mutations are not cached, and offline editing is not claimed yet.
 - The phone view replaces the Gantt with project/task lists and full-screen field updates. Desktop remains the detailed planning surface.
+- The mobile account control exposes identity, dashboard, account/device settings, current phone-theme behavior, and an explicit sign-out action.
 
 ## Deployment
 

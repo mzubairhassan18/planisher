@@ -1,7 +1,7 @@
 # Planisher - Current State and Hosted Development Roadmap
 
 Status: Approved and in implementation
-Last reviewed: 2026-07-14
+Last reviewed: 2026-07-15
 Purpose: Keep one concise, current record of what Planisher is, what the repository actually does today, what is missing, and the next implementation sequence.
 
 This document is the current execution guide. The larger [Product and Build Plan](./PRODUCT_AND_BUILD_PLAN.md) remains the detailed product specification and design history.
@@ -76,9 +76,9 @@ and video files are represented by temporary object URLs and are not uploaded an
 | Files | File selection and metadata display in local memory |
 | Activity | Local mutation feed, activity detail drawer, and navigation to related project/task/comment/budget/file view |
 | Locale | Browser locale, timezone, and currency detection with local overrides/fallbacks |
-| Mobile PWA | Manifest, icon/maskable icon, install suggestion, app chrome, compact dashboard, active-project list, searchable/filterable task lists, hierarchy/dependency cues, full-screen field updates/activity, and safe offline fallback |
+| Mobile PWA | Manifest, icon/maskable icon, install suggestion, app chrome, compact dashboard, active-project list, searchable/filterable task lists, hierarchy/dependency cues, full-screen field updates/activity, account/logout menu, phone-synchronized light/dark theme, and safe offline fallback |
 | Passkeys | Supabase experimental registration and sign-in controls are implemented only for the installed mobile PWA; the project-level Passkeys/RP configuration must be enabled before use |
-| Marketing | Public landing page with a Three.js scene plus CSS fallback, animated construction SVG, GSAP scroll reveals, feature carousel, workflow outcome section, pricing, email-draft contact form, and footer |
+| Marketing | Public landing page with rotating residential, school, and high-rise Three.js builds plus CSS fallback; a pinned, scroll-controlled site/truck story; GSAP reveals; feature carousel; workflow outcomes; pricing; contact form; authenticated navigation; and footer |
 
 ### 2.3 Partial or prototype-only capabilities
 
@@ -105,8 +105,11 @@ and video files are represented by temporary object URLs and are not uploaded an
 - Long workspace/account labels are clipped safely and glide only while their parent control is hovered or keyboard-focused. Continuous marquee motion was rejected because moving content must be pausable and reduced-motion preferences must be respected; see [WCAG Pause, Stop, Hide](https://www.w3.org/WAI/WCAG21/Understanding/pause-stop-hide.html) and [W3C reduced-motion technique C39](https://www.w3.org/WAI/WCAG22/Techniques/css/C39).
 - Dynamic workspace routes use the Next.js `loading.tsx` convention so a prefetched skeleton appears immediately while server-rendered content streams. Server-action buttons also expose their own pending label and spinner, while a thin global progress line covers links and programmatic navigation.
 - The mobile field UX follows a list-first hierarchy: dashboard → project → task → focused update/activity. The desktop Gantt is hidden at phone widths rather than compressed into a low-usability timeline.
+- The installed PWA always follows the phone's `prefers-color-scheme` value and updates when the phone theme changes. Desktop/browser mode retains explicit light, dark, and system choices.
+- The PWA identity control is a proper account menu rather than a direct passkey-settings shortcut. It includes account/device settings and a server-backed sign-out action.
 - Install promotion is dismissible, remembered for seven days, and only appears after Chromium reports installability; iOS receives explicit Add to Home Screen instructions. The service worker does not cache authenticated product data.
 - Passkeys are WebAuthn credentials: device biometrics/PIN authorize a private key locally, and Planisher/Supabase receive a signed assertion rather than biometric data.
+- The public hero is one viewport tall on desktop. Its construction scene cycles three building types, the following site scene pins while the truck advances with scroll, and returning authenticated visitors see Dashboard rather than redundant sign-in actions.
 
 ## 3. Newly promoted MVP requirements
 

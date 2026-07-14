@@ -78,7 +78,11 @@ const plans = [
   },
 ];
 
-export function PlanisherMarketing() {
+export function PlanisherMarketing({
+  isAuthenticated,
+}: {
+  isAuthenticated: boolean;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [featureIndex, setFeatureIndex] = useState(0);
@@ -110,6 +114,46 @@ export function PlanisherMarketing() {
         duration: 0.85,
         scrollTrigger: { trigger: ".marketing-pricing", start: "top 70%", once: true },
       });
+
+      if (window.innerWidth >= 981) {
+        gsap.set(".site-truck", { x: -260 });
+        gsap
+          .timeline({
+            scrollTrigger: {
+              trigger: ".marketing-scroll-story",
+              start: "top top",
+              end: "+=150%",
+              scrub: 0.25,
+              pin: true,
+              anticipatePin: 1,
+            },
+          })
+          .fromTo(
+            ".marketing-scroll-story .marketing-section-copy",
+            { y: 70, opacity: 0.35 },
+            { y: 0, opacity: 1, ease: "none" },
+            0,
+          )
+          .to(".site-truck", { x: 1250, ease: "none" }, 0)
+          .fromTo(
+            ".construction-strip",
+            { scale: 0.96 },
+            { scale: 1, ease: "none" },
+            0,
+          )
+          .fromTo(
+            ".site-digger",
+            { rotation: -3, transformOrigin: "474px 220px" },
+            { rotation: 4, ease: "none" },
+            0.12,
+          )
+          .fromTo(
+            ".hammer-arm",
+            { rotation: -22, transformOrigin: "765px 190px" },
+            { rotation: 28, ease: "none" },
+            0.28,
+          );
+      }
     }, rootRef);
     return () => context.revert();
   }, []);
@@ -122,6 +166,9 @@ export function PlanisherMarketing() {
     );
     window.location.href = `mailto:mzubairhassan18@gmail.com?subject=${subject}&body=${body}`;
   }
+
+  const primaryHref = isAuthenticated ? "/app" : "/sign-up";
+  const primaryLabel = isAuthenticated ? "Open dashboard" : "Create your first plan";
 
   return (
     <div className="marketing-site" ref={rootRef}>
@@ -136,8 +183,14 @@ export function PlanisherMarketing() {
           <a href="#contact" onClick={() => setMenuOpen(false)}>Contact</a>
         </nav>
         <div className="marketing-nav-actions">
-          <Link href="/sign-in">Sign in</Link>
-          <Link className="marketing-button small" href="/sign-up">Start planning</Link>
+          {isAuthenticated ? (
+            <Link className="marketing-button small" href="/app">Dashboard</Link>
+          ) : (
+            <>
+              <Link href="/sign-in">Sign in</Link>
+              <Link className="marketing-button small" href="/sign-up">Start planning</Link>
+            </>
+          )}
         </div>
         <button
           aria-expanded={menuOpen}
@@ -162,7 +215,7 @@ export function PlanisherMarketing() {
               into one clear construction workspace — from a single home to a growing portfolio.
             </p>
             <div className="marketing-hero-actions">
-              <Link className="marketing-button" href="/sign-up">Create your first plan <ArrowRight size={17} /></Link>
+              <Link className="marketing-button" href={primaryHref}>{primaryLabel} <ArrowRight size={17} /></Link>
               <a className="marketing-text-button" href="#product">See how it works</a>
             </div>
             <div className="marketing-proof-row">
@@ -178,7 +231,7 @@ export function PlanisherMarketing() {
           </div>
         </section>
 
-        <section className="marketing-site-section" data-reveal>
+        <section className="marketing-site-section marketing-scroll-story">
           <div className="marketing-section-copy">
             <span className="marketing-kicker">Plans meet the real world</span>
             <h2>The office sets direction. The field keeps it true.</h2>
@@ -258,8 +311,8 @@ export function PlanisherMarketing() {
                 <ul>
                   {plan.limits.map((limit) => <li key={limit}><Check size={15} /> {limit}</li>)}
                 </ul>
-                <Link className={plan.featured ? "marketing-button" : "marketing-text-button boxed"} href="/sign-up">
-                  {plan.name === "Enterprise" ? "Talk to us" : "Choose plan"} <ArrowRight size={16} />
+                <Link className={plan.featured ? "marketing-button" : "marketing-text-button boxed"} href={plan.name === "Enterprise" ? "#contact" : primaryHref}>
+                  {plan.name === "Enterprise" ? "Talk to us" : isAuthenticated ? "Open dashboard" : "Choose plan"} <ArrowRight size={16} />
                 </Link>
               </article>
             ))}
@@ -290,8 +343,8 @@ export function PlanisherMarketing() {
 
       <footer className="marketing-footer">
         <div><Link className="marketing-brand" href="/"><span>P</span> Planisher</Link><p>Construction planning without the noise.</p></div>
-        <div><strong>Product</strong><a href="#product">Capabilities</a><a href="#pricing">Pricing</a><Link href="/sign-in">Sign in</Link></div>
-        <div><strong>Company</strong><a href="#contact">Contact</a><Link href="/sign-up">Create account</Link></div>
+        <div><strong>Product</strong><a href="#product">Capabilities</a><a href="#pricing">Pricing</a><Link href={isAuthenticated ? "/app" : "/sign-in"}>{isAuthenticated ? "Dashboard" : "Sign in"}</Link></div>
+        <div><strong>Company</strong><a href="#contact">Contact</a>{isAuthenticated ? <Link href="/app">Open workspace</Link> : <Link href="/sign-up">Create account</Link>}</div>
         <small>© {new Date().getFullYear()} Planisher. Development preview.</small>
       </footer>
     </div>

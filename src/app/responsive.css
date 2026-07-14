@@ -1,6 +1,8 @@
 .mobile-app-topbar,
 .mobile-bottom-nav,
-.mobile-project-workspace {
+.mobile-project-workspace,
+.mobile-account-scrim,
+.mobile-account-menu {
   display: none;
 }
 
@@ -387,8 +389,136 @@
   .mobile-user-avatar {
     color: white;
     background: var(--forest-700);
+    border-color: transparent;
     font-size: 10px;
     font-weight: 850;
+  }
+
+  .mobile-account-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 54;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    background: rgba(7, 19, 14, 0.34);
+    border: 0;
+    backdrop-filter: blur(2px);
+  }
+
+  .mobile-account-menu {
+    position: fixed;
+    top: calc(70px + env(safe-area-inset-top));
+    right: 12px;
+    left: 12px;
+    z-index: 55;
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 22px 65px rgba(8, 26, 18, 0.25);
+  }
+
+  .mobile-account-identity {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: center;
+    gap: 11px;
+    padding: 7px 7px 12px;
+    margin-bottom: 3px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mobile-account-identity > span {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    color: white;
+    background: var(--forest-700);
+    border-radius: 13px;
+    font-size: 10px;
+    font-weight: 850;
+  }
+
+  .mobile-account-identity > div,
+  .mobile-account-identity strong,
+  .mobile-account-identity small {
+    min-width: 0;
+  }
+
+  .mobile-account-identity > div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .mobile-account-identity strong,
+  .mobile-account-identity small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-account-identity strong {
+    font-size: 12px;
+  }
+
+  .mobile-account-identity small {
+    color: var(--muted);
+    font-size: 9px;
+  }
+
+  .mobile-account-menu > a,
+  .mobile-account-signout {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 11px;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 760;
+    text-align: left;
+  }
+
+  .mobile-account-menu > a:active,
+  .mobile-account-signout:active {
+    background: var(--surface-soft);
+  }
+
+  .mobile-account-menu .theme-control-device {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 11px;
+  }
+
+  .theme-control-device > span:last-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 750;
+  }
+
+  .mobile-account-menu form {
+    padding-top: 4px;
+    border-top: 1px solid var(--line);
+  }
+
+  .mobile-account-signout {
+    color: var(--red);
   }
 
   .mobile-app-identity {
@@ -462,18 +592,23 @@
     align-items: flex-start;
   }
 
-  .heading-with-action > .primary-button,
-  .heading-with-action > button {
+  .heading-with-action > .new-project-button {
+    display: grid;
     width: 42px;
     min-width: 42px;
+    height: 42px;
+    place-items: center;
     padding: 0;
-    overflow: hidden;
-    color: transparent;
-    gap: 0;
+    color: white;
+    font-size: 0;
   }
 
-  .heading-with-action > .primary-button svg,
-  .heading-with-action > button svg {
+  .heading-with-action > .new-project-button span {
+    display: none;
+  }
+
+  .heading-with-action > .new-project-button svg {
+    display: block;
     color: white;
   }
 
