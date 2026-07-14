@@ -3,6 +3,7 @@ import Link from "next/link";
 import { signInAction } from "@/app/auth/actions";
 import { AuthCard, AuthField } from "@/components/auth-card";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { PasskeySignInButton } from "@/components/passkey-controls";
 
 export default async function SignInPage({
   searchParams,
@@ -44,6 +45,7 @@ export default async function SignInPage({
           pendingLabel="Signing in…"
         />
       </form>
+      <PasskeySignInButton />
     </AuthCard>
   );
 }

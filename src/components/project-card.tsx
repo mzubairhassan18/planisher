@@ -42,7 +42,18 @@ export function ProjectCard({
   );
 
   return (
-    <article className="project-card">
+    <article
+      className={project.coverImage ? "project-card has-cover" : "project-card"}
+    >
+      {project.coverImage ? (
+        <div
+          aria-label={`${project.name} cover image`}
+          className="project-card-cover"
+          role="img"
+          style={{ backgroundImage: `url(${project.coverImage.url})` }}
+        />
+      ) : null}
+      <div className="project-card-content">
       <div className="project-card-top">
         <span className="project-code">{project.code}</span>
         <div className="project-card-actions">
@@ -124,6 +135,7 @@ export function ProjectCard({
           Open plan
           <ArrowUpRight aria-hidden="true" size={15} />
         </Link>
+      </div>
       </div>
     </article>
   );

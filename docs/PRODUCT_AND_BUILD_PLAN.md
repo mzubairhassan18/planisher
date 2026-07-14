@@ -3,7 +3,7 @@
 Status: Local UI prototype implemented; hosted development architecture approved and in implementation
 Prepared: 2026-07-04
 Last revised: 2026-07-14
-Scope: Desktop-first SaaS. The next milestone promotes authentication, user management, PostgreSQL persistence, private file storage, and plan-limit enforcement into active scope. Mobile-specific development and real payment collection remain deferred.
+Scope: Desktop-first planning plus a mobile-first installable PWA field view. The next milestone promotes user management, PostgreSQL persistence, private file storage, and plan-limit enforcement into active scope. Native apps and real payment collection remain deferred.
 
 > Current execution source of truth: [Current State and Hosted Development Roadmap](./CURRENT_STATE_AND_HOSTED_ROADMAP.md). This document remains the detailed product specification and design history.
 
@@ -19,6 +19,7 @@ The hosted development release will let a user:
 - invite and manage workspace/project members with server-enforced roles;
 - create, archive, and duplicate projects;
 - create hierarchical tasks and dependencies;
+- add nested subtasks directly from a parent task;
 - plan and edit work in a Gantt chart;
 - track task dates, assignees, descriptions, progress-derived schedule status, attachments, and comments;
 - see an append-only audit trail of changes;
@@ -27,6 +28,8 @@ The hosted development release will let a user:
 - control access at both workspace and project level;
 - store product records and private task/project media durably;
 - see current plan usage and receive clear server-enforced project, task, member, and storage limits.
+- use a separate installable mobile field experience for active-project navigation, task progress, problems, media updates, and activity;
+- optionally register a Supabase passkey in the installed mobile PWA for device-backed sign-in.
 
 The work has followed this order:
 
@@ -97,6 +100,7 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 
 - Create, edit, archive, restore, and duplicate a project.
 - Project name, code, description, location, and dates.
+- Optional project cover image displayed as visual context on project cards; the durable implementation uses private object storage rather than a public URL.
 - Timezone is detected from the browser; currency is inferred from the browser locale/region. Neither is a required project-creation field.
 - Project progress and display status are derived from its leaf tasks rather than entered manually.
 - Project cards and searchable/filterable project list.
@@ -107,6 +111,7 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 #### Tasks and schedule
 
 - Summary tasks, child tasks, regular tasks, and milestones.
+- Create a subtask from its parent task and preserve hierarchy in both Gantt and mobile list views.
 - Start date, end date, description, priority, progress, and assignees.
 - Finish-to-start dependencies in the first UI; the data model supports all four dependency types.
 - Reorder and reparent tasks.
@@ -141,8 +146,8 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 
 ### 3.2 Explicitly outside the MVP
 
-- Native iOS/Android apps; the web app will be responsive.
-- Mobile-specific layouts and interactions; the local prototype is desktop-first.
+- Native iOS/Android apps; the installable PWA is the first mobile delivery surface.
+- Offline project mutation/synchronization; the PWA initially requires the network for authenticated product data.
 - Full drawing markup, BIM, takeoff, procurement, payroll, time clock, and equipment management.
 - RFIs, submittals, punch lists, change-order approval, invoicing, and accounting integrations.
 - Real-time multi-cursor collaboration.

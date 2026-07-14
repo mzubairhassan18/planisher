@@ -2,7 +2,7 @@
 
 Planisher is a construction planning SaaS for owner-builders, residential builders, contractors, and larger project teams. It brings the programme, progress, task discussions, costs, files, and decisions into one calm workspace built around a Gantt schedule.
 
-The current milestone is a desktop-first hosted development build. Supabase provides authentication, onboarding/workspace records, and a persistent read-only starter-template catalog. Projects created from those templates still use the browser-local prototype store and will be moved to Supabase in the next backend slice.
+The current milestone combines the desktop planning prototype with a mobile-first installable PWA field view and a public marketing site. Supabase provides authentication, onboarding/workspace records, passkey APIs, and a persistent read-only starter-template catalog. Projects created from those templates still use the browser-local prototype store and will be moved to Supabase in the next backend slice.
 
 ## What works today
 
@@ -10,9 +10,12 @@ The current milestone is a desktop-first hosted development build. Supabase prov
 - Mandatory first-login profile and workspace setup.
 - Five persistent construction starter plans: single-storey house, double-storey house, multi-storey building, hospital, and school.
 - Blank or template-based project creation with shifted dates and reset progress.
-- Project dashboard, search, filters, duplicate/delete actions, and workspace templates.
+- Optional project cover images, nested subtask creation, project dashboard charts, live local time, search, filters, duplicate/delete actions, and workspace templates.
 - DHTMLX Gantt schedule with tasks, dependencies, progress, status colors, issue flags, and task focus links.
 - Editable task drawer with comments/problems and temporary image, audio, and video previews.
+- Installable mobile PWA with a compact dashboard, project list, searchable/filterable task list, hierarchy/dependency cues, field-focused task updates, activity navigation, and offline fallback.
+- Experimental mobile-PWA passkey controls for Face ID, fingerprint, device PIN, or security-key sign-in after Supabase Passkeys is enabled.
+- Public Planisher landing page with a Three.js construction scene, animated SVG site activity, GSAP reveals, capability carousel, outcome stories, pricing, contact form, and footer.
 - Project/task budget and expense entry in the local prototype store.
 - Browser-based timezone and currency detection.
 - Light, dark, and system themes; theme preference is remembered in the browser.
@@ -31,6 +34,7 @@ For the detailed product specification and the honest implementation status, see
 - DHTMLX Gantt Community Edition
 - date-fns, Zod, Lucide icons, and custom CSS
 - pnpm
+- Three.js and GSAP for the public marketing experience
 
 ## Run locally
 
@@ -69,6 +73,18 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000), create an account, and complete the first-login setup. The starter templates will appear under **Templates** and in the **New project** dialog.
 
+The public landing page is `/`; the authenticated workspace starts at `/app`. To test install promotion and passkeys, use an HTTPS deployment on a supported mobile browser and install Planisher to the home screen.
+
+### Optional: enable mobile passkeys
+
+Supabase Passkeys is experimental. In Supabase **Authentication → Passkeys**, enable passkeys and set:
+
+- relying-party display name: `Planisher`;
+- relying-party ID: the stable production domain, for example `planisher.vercel.app`;
+- allowed origin: `https://planisher.vercel.app` (plus loopback local origins only while developing).
+
+Changing the relying-party ID later invalidates previously registered passkeys. Registration is intentionally shown only inside the installed mobile PWA; a confirmed user must sign in with email/password before registering a passkey.
+
 ## Useful commands
 
 ```bash
@@ -96,7 +112,7 @@ pnpm build
 | Profile, workspace, and subscription seed | Supabase PostgreSQL | Yes |
 | Built-in starter templates and template tasks | Supabase PostgreSQL | Yes |
 | User-created projects, tasks, comments, costs, and activity | React browser-memory prototype | No; refresh clears them |
-| Selected comment media and files | Temporary browser object URLs | No |
+| Project covers, selected comment media, and files | Temporary browser object URLs | No |
 
 This distinction is intentional and visible in the UI. Do not use the current build for a real construction project or irreplaceable records. The next major implementation slice replaces the local product store with server-controlled Supabase records and private Storage uploads.
 
@@ -112,6 +128,13 @@ Built-in templates are migration-managed and read-only to application users. A u
 - Exact construction-site location remains a project field because an account’s browser location is not a reliable substitute for the site address.
 - Theme defaults to the operating-system preference. Light, dark, and system choices are available from the account menu and stored only in the browser.
 - Dark mode uses a low-glare green-charcoal canvas rather than pure black while preserving Planisher’s primary green brand colors.
+
+## PWA behavior
+
+- The manifest starts the installed app at `/app` in standalone portrait mode.
+- Android/Chromium receives a dismissible install action only after `beforeinstallprompt` fires; iOS receives “Share → Add to Home Screen” guidance.
+- The service worker caches only the public shell/static assets and provides an offline page. Authenticated product records and mutations are not cached, and offline editing is not claimed yet.
+- The phone view replaces the Gantt with project/task lists and full-screen field updates. Desktop remains the detailed planning surface.
 
 ## Deployment
 

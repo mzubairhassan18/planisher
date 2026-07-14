@@ -22,7 +22,7 @@ import type {
 
 type DialogState =
   | { type: "new-project"; templateId?: string }
-  | { type: "new-task"; projectId: string }
+  | { type: "new-task"; projectId: string; parentTaskId?: string }
   | {
       type: "task";
       projectId: string;
@@ -45,6 +45,7 @@ interface CreateProjectInput {
   endDate: string;
   budgetMinor: number;
   templateId?: string;
+  coverImageFile?: File;
 }
 
 interface CreateTaskInput {
@@ -53,6 +54,7 @@ interface CreateTaskInput {
   endDate: string;
   progress: number;
   assigneeId?: string;
+  parentTaskId?: string;
 }
 
 interface CreateTemplateInput {
@@ -92,7 +94,7 @@ interface LocalStoreValue {
   dialog: DialogState;
   closeDialog: () => void;
   openNewProject: (templateId?: string) => void;
-  openNewTask: (projectId: string) => void;
+  openNewTask: (projectId: string, parentTaskId?: string) => void;
   openTask: (projectId: string, taskId: string, commentId?: string) => void;
   openNewTemplate: (sourceProjectId?: string) => void;
   openDeleteProject: (projectId: string) => void;
@@ -170,7 +172,8 @@ export function LocalStoreProvider({
     setDialog({ type: "new-project", templateId });
   }, []);
   const openNewTask = useCallback(
-    (projectId: string) => setDialog({ type: "new-task", projectId }),
+    (projectId: string, parentTaskId?: string) =>
+      setDialog({ type: "new-task", projectId, parentTaskId }),
     [],
   );
   const openTask = useCallback(
@@ -248,6 +251,14 @@ export function LocalStoreProvider({
         endDate: input.endDate,
         budgetMinor: input.budgetMinor,
         spentMinor: 0,
+        coverImage: input.coverImageFile
+          ? {
+              name: input.coverImageFile.name,
+              type: input.coverImageFile.type || "image/jpeg",
+              sizeBytes: input.coverImageFile.size,
+              url: URL.createObjectURL(input.coverImageFile),
+            }
+          : undefined,
         teamIds,
         tasks,
         dependencies,
@@ -382,6 +393,7 @@ export function LocalStoreProvider({
         id,
         projectId,
         type: "task",
+        parentId: input.parentTaskId,
         title: input.title,
         startDate: input.startDate,
         endDate: input.endDate,

@@ -3,6 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { Globe2, HardDrive, RotateCcw } from "lucide-react";
 
+import { PasskeySettingsCard } from "@/components/passkey-controls";
+
 import {
   getLocaleSettingsSnapshot,
   getServerLocaleSettingsSnapshot,
@@ -24,6 +26,7 @@ export default function LocalSettingsPage() {
         <p>Transparent defaults for this browser and local workspace.</p>
       </header>
       <div className="settings-grid">
+        <PasskeySettingsCard />
         <article className="content-card settings-card">
           <Globe2 aria-hidden="true" size={22} />
           <div>

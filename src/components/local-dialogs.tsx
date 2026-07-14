@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -9,6 +10,7 @@ import {
   CalendarDays,
   FolderKanban,
   Image as ImageIcon,
+  ListPlus,
   MessageSquare,
   Mic,
   Paperclip,
@@ -81,12 +83,14 @@ function DialogFrame({
 function Field({
   label,
   children,
+  className = "",
 }: {
   label: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <label className="form-field">
+    <label className={`form-field ${className}`.trim()}>
       <span>{label}</span>
       {children}
     </label>
@@ -100,9 +104,19 @@ function NewProjectDialog() {
   const initialTemplateId =
     dialog?.type === "new-project" ? dialog.templateId ?? "" : "";
   const [templateId, setTemplateId] = useState(initialTemplateId);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const coverPreview = useMemo(
+    () => (coverFile ? URL.createObjectURL(coverFile) : ""),
+    [coverFile],
+  );
   const selectedTemplate = templates.find(
     (template) => template.id === templateId,
   );
+
+  useEffect(() => {
+    if (!coverPreview) return;
+    return () => URL.revokeObjectURL(coverPreview);
+  }, [coverPreview]);
 
   return (
     <DialogFrame
@@ -124,6 +138,7 @@ function NewProjectDialog() {
             budgetMinor:
               Math.round(Number(data.get("budget") || 0) * 100) || 0,
             templateId: String(data.get("templateId") || "") || undefined,
+            coverImageFile: coverFile ?? undefined,
           });
           closeDialog();
           startNavigationProgress();
@@ -173,6 +188,43 @@ function NewProjectDialog() {
             rows={3}
           />
         </Field>
+        <Field label="Project cover image (optional)">
+          <label className="project-cover-picker">
+            {coverPreview ? (
+              <Image
+                alt="Selected project cover preview"
+                height={300}
+                src={coverPreview}
+                unoptimized
+                width={720}
+              />
+            ) : (
+              <span className="project-cover-placeholder">
+                <ImageIcon aria-hidden="true" size={24} />
+                <strong>Add a site photo or architectural view</strong>
+                <small>JPG, PNG, or WebP up to 10 MB</small>
+              </span>
+            )}
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              name="coverImage"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                if (file && file.size > 10_000_000) {
+                  event.target.value = "";
+                  setCoverFile(null);
+                  return;
+                }
+                setCoverFile(file);
+              }}
+              type="file"
+            />
+            <span className="secondary-button compact">
+              <ImageIcon aria-hidden="true" size={15} />
+              {coverPreview ? "Change image" : "Choose image"}
+            </span>
+          </label>
+        </Field>
         <div className="form-grid two-columns">
           <Field label="Start date">
             <input defaultValue={today} name="startDate" required type="date" />
@@ -201,16 +253,27 @@ function NewProjectDialog() {
   );
 }
 
-function NewTaskDialog({ projectId }: { projectId: string }) {
+function NewTaskDialog({
+  projectId,
+  parentTaskId,
+}: {
+  projectId: string;
+  parentTaskId?: string;
+}) {
   const { addTask, closeDialog, members, projects } = useLocalStore();
   const project = projects.find((item) => item.id === projectId);
+  const parentTask = project?.tasks.find((item) => item.id === parentTaskId);
 
   if (!project) return null;
 
   return (
     <DialogFrame
-      title="Add a task"
-      description={`Add work to ${project.name}. Its status color will be calculated from dates and progress.`}
+      title={parentTask ? "Add a subtask" : "Add a task"}
+      description={
+        parentTask
+          ? `Add a smaller piece of work beneath ${parentTask.title}.`
+          : `Add work to ${project.name}. Its status color will be calculated from dates and progress.`
+      }
     >
       <form
         className="dialog-form"
@@ -223,11 +286,21 @@ function NewTaskDialog({ projectId }: { projectId: string }) {
             endDate: String(data.get("endDate")),
             progress: Number(data.get("progress") || 0),
             assigneeId: String(data.get("assigneeId") || "") || undefined,
+            parentTaskId,
           });
           closeDialog();
         }}
       >
-        <Field label="Task name">
+        {parentTask ? (
+          <div className="subtask-parent-note">
+            <ListPlus aria-hidden="true" size={17} />
+            <span>
+              <small>Parent task</small>
+              <strong>{parentTask.title}</strong>
+            </span>
+          </div>
+        ) : null}
+        <Field label={parentTask ? "Subtask name" : "Task name"}>
           <input autoFocus name="title" placeholder="Install windows" required />
         </Field>
         <div className="form-grid two-columns">
@@ -278,7 +351,7 @@ function NewTaskDialog({ projectId }: { projectId: string }) {
             Cancel
           </button>
           <button className="primary-button" type="submit">
-            Add task
+            {parentTask ? "Add subtask" : "Add task"}
           </button>
         </footer>
       </form>
@@ -765,6 +838,7 @@ function TaskDrawer({
     members,
     openBudgetLine,
     openCostEntry,
+    openNewTask,
     projects,
     updateTask,
   } = useLocalStore();
@@ -897,7 +971,7 @@ function TaskDrawer({
             <CalendarDays aria-hidden="true" size={16} />
             Task details
           </div>
-          <Field label="Task name">
+          <Field className="mobile-hide-task-field" label="Task name">
             <input
               name="title"
               onChange={(event) => setTitle(event.target.value)}
@@ -905,7 +979,7 @@ function TaskDrawer({
               value={title}
             />
           </Field>
-          <Field label="Description">
+          <Field className="mobile-hide-task-field" label="Description">
             <textarea
               name="description"
               onChange={(event) => setDescription(event.target.value)}
@@ -915,7 +989,7 @@ function TaskDrawer({
             />
           </Field>
           <div className="form-grid two-columns">
-            <Field label="Start date">
+            <Field className="mobile-hide-task-field" label="Start date">
               <input
                 max={endDate}
                 name="startDate"
@@ -925,7 +999,7 @@ function TaskDrawer({
                 value={startDate}
               />
             </Field>
-            <Field label="End date">
+            <Field className="mobile-hide-task-field" label="End date">
               <input
                 min={startDate}
                 name="endDate"
@@ -936,7 +1010,7 @@ function TaskDrawer({
               />
             </Field>
           </div>
-          <Field label="Assignee">
+          <Field className="mobile-hide-task-field" label="Assignee">
             <span className="select-with-icon">
               <UserRound aria-hidden="true" size={15} />
               <select
@@ -985,6 +1059,14 @@ function TaskDrawer({
           <button className="primary-button drawer-save" type="submit">
             <Save aria-hidden="true" size={15} />
             {saved ? "Saved" : "Save"}
+          </button>
+          <button
+            className="secondary-button drawer-subtask-button"
+            onClick={() => openNewTask(projectId, taskId)}
+            type="button"
+          >
+            <ListPlus aria-hidden="true" size={15} />
+            Add subtask
           </button>
         </form>
 
@@ -1226,7 +1308,12 @@ export function LocalDialogs() {
   if (!dialog) return null;
   if (dialog.type === "new-project") return <NewProjectDialog />;
   if (dialog.type === "new-task") {
-    return <NewTaskDialog projectId={dialog.projectId} />;
+    return (
+      <NewTaskDialog
+        parentTaskId={dialog.parentTaskId}
+        projectId={dialog.projectId}
+      />
+    );
   }
   if (dialog.type === "new-template") return <NewTemplateDialog />;
   if (dialog.type === "delete-project") {

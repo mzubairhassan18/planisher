@@ -11,6 +11,10 @@ import {
 } from "lucide-react";
 
 import { NewProjectButton } from "@/components/action-buttons";
+import {
+  LiveGreetingClock,
+  PortfolioDonut,
+} from "@/components/dashboard-pulse";
 import { useLocalStore } from "@/components/local-store";
 import { MetricCard } from "@/components/metric-card";
 import { ProjectCard } from "@/components/project-card";
@@ -18,6 +22,7 @@ import { localToday } from "@/lib/local-date";
 import {
   countTasksByStatus,
   getLeafTasks,
+  getProjectScheduleStatus,
   getTaskScheduleStatus,
 } from "@/lib/progress";
 
@@ -50,23 +55,14 @@ export default function DashboardPage() {
     )
     .slice(0, 4);
   const firstName = currentUser.name.split(/\s+/)[0] || "there";
-  const hour = localToday.getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const formattedDate = new Intl.DateTimeFormat(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(localToday);
+  const delayedProjects = projects.filter(
+    (project) => getProjectScheduleStatus(project, localToday) === "delayed",
+  ).length;
 
   return (
     <div className="dashboard-page">
       <header className="page-heading heading-with-action">
-        <div>
-          <span className="eyebrow">{formattedDate}</span>
-          <h1>{greeting}, {firstName}.</h1>
-          <p>Here is what needs your attention across the build programme.</p>
-        </div>
+        <LiveGreetingClock firstName={firstName} />
         <NewProjectButton />
       </header>
 
@@ -79,9 +75,9 @@ export default function DashboardPage() {
           tone="blue"
         />
         <MetricCard
-          label="Delayed tasks"
-          value={String(delayedTasks)}
-          note="Needs a schedule update"
+          label="Delayed projects"
+          value={String(delayedProjects)}
+          note={`${delayedTasks} delayed ${delayedTasks === 1 ? "task" : "tasks"}`}
           icon={TriangleAlert}
           tone="red"
         />
@@ -99,6 +95,15 @@ export default function DashboardPage() {
           tone="green"
         />
       </section>
+
+      <PortfolioDonut
+        segments={[
+          { label: "Active projects", value: projects.length, color: "#2d6cdf" },
+          { label: "Delayed projects", value: delayedProjects, color: "#d5534f" },
+          { label: "Due this week", value: dueThisWeek, color: "#d99b2b" },
+          { label: "Tasks completed", value: completedTasks, color: "#2f8a63" },
+        ]}
+      />
 
       <section className="dashboard-section">
         <div className="section-heading">

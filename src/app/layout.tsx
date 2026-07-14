@@ -3,7 +3,10 @@ import { Suspense } from "react";
 import "dhtmlx-gantt/codebase/dhtmlxgantt.css";
 
 import "@/app/globals.css";
+import "@/app/marketing.css";
+import "@/app/responsive.css";
 import { NavigationProgress } from "@/components/navigation-progress";
+import { PwaRegistration } from "@/components/pwa-registration";
 
 export const metadata: Metadata = {
   title: {
@@ -39,6 +42,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
+        <PwaRegistration />
         <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>

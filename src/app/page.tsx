@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PlanisherMarketing } from "@/components/marketing/planisher-marketing";
 
 export default function Home() {
-  redirect("/app");
+  return <PlanisherMarketing />;
 }

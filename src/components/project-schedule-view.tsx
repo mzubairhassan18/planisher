@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { NewTaskButton } from "@/components/action-buttons";
 import { useLocalStore } from "@/components/local-store";
+import { MobileTaskList } from "@/components/mobile-task-list";
 import { ProjectWorkspace } from "@/components/project-workspace";
 import { ScheduleGantt } from "@/components/schedule-gantt";
 import { localToday } from "@/lib/local-date";
@@ -55,7 +56,18 @@ export function ProjectScheduleView({
     );
   }
 
+  const issueTaskIds = new Set(
+    comments
+      .filter(
+        (comment) =>
+          comment.projectId === project.id && comment.kind === "issue",
+      )
+      .map((comment) => comment.taskId),
+  );
+
   return (
+    <>
+    <div className="desktop-project-workspace">
     <ProjectWorkspace
       actions={<NewTaskButton className="secondary-button" projectId={project.id} />}
       activeTab="schedule"
@@ -78,17 +90,7 @@ export function ProjectScheduleView({
 
       <ScheduleGantt
         focusTaskId={focusTaskId}
-        issueTaskIds={
-          new Set(
-            comments
-              .filter(
-                (comment) =>
-                  comment.projectId === project.id &&
-                  comment.kind === "issue",
-              )
-              .map((comment) => comment.taskId),
-          )
-        }
+        issueTaskIds={issueTaskIds}
         onAddTask={() => openNewTask(project.id)}
         onSelectTask={(taskId) => openTask(project.id, taskId)}
         onUpdateProgress={(taskId, progress) =>
@@ -98,5 +100,10 @@ export function ProjectScheduleView({
         today={localToday}
       />
     </ProjectWorkspace>
+    </div>
+    <div className="mobile-project-workspace">
+      <MobileTaskList issueTaskIds={issueTaskIds} project={project} />
+    </div>
+    </>
   );
 }

@@ -23,10 +23,11 @@ The product should stay easy enough for one person building a house while retain
 
 ### 2.1 Runtime architecture today
 
-The repository is a desktop-first UI prototype with hosted identity and a provisioned
-development database. The built-in starter-plan catalog is now persisted in Supabase;
-user-created product records still use the browser-local prototype store. The next
-slice replaces that remaining store with server-controlled Supabase data access.
+The repository now contains three deliberate presentation surfaces: a desktop planning
+prototype, an installable mobile-first PWA field view, and a public marketing site.
+Hosted identity and the starter-plan catalog use Supabase; user-created product records
+still use the browser-local prototype store. The next backend slice replaces that
+remaining store with server-controlled Supabase data access.
 
 ```mermaid
 flowchart LR
@@ -65,16 +66,19 @@ and video files are represented by temporary object URLs and are not uploaded an
 | Area | Current behavior |
 | --- | --- |
 | Application shell | Desktop navigation, project/workspace menu, user menu, locale summary, global search, overflow-safe identity labels, light/dark/system themes, global navigation progress, and route loading skeletons |
-| Dashboard | Portfolio metrics, project cards, delayed-task links, recent activity, and budget summary |
-| Projects | Create blank or template-based project, search, status filter, grid/list view, duplicate, save as template, and delete |
+| Dashboard | Live locale date/time, portfolio metrics, an accessible status donut, project cards, delayed-task links, recent activity, and budget summary |
+| Projects | Create blank or template-based project with an optional temporary cover image, search, status filter, grid/list view, duplicate, save as template, and delete |
 | Templates | Load five persistent, RLS-protected starter plans; create temporary workspace templates; reuse tasks/dependencies with shifted dates and reset progress |
-| Schedule | DHTMLX Gantt rendering, hierarchy, milestones, dependencies, day/week/month scale, task search, delayed filter, progress drag, issue flag, and focused task highlight |
-| Task drawer | Edit title, description, dates, assignee, and progress; add task-linked budget/expense; add comments or raised problems |
+| Schedule | DHTMLX Gantt rendering, hierarchy, subtask creation, milestones, dependencies, day/week/month scale, task search, delayed filter, progress drag, issue flag, and focused task highlight |
+| Task drawer | Edit title, description, dates, assignee, and progress; create a subtask; add task-linked budget/expense; add comments or raised problems |
 | Comments/media | Text comments and problems can select images, audio, or video for temporary local preview |
 | Budget | Portfolio totals, project budget lines, commitments/actual expenses, task/category filters, and task-linked costs |
 | Files | File selection and metadata display in local memory |
 | Activity | Local mutation feed, activity detail drawer, and navigation to related project/task/comment/budget/file view |
 | Locale | Browser locale, timezone, and currency detection with local overrides/fallbacks |
+| Mobile PWA | Manifest, icon/maskable icon, install suggestion, app chrome, compact dashboard, active-project list, searchable/filterable task lists, hierarchy/dependency cues, full-screen field updates/activity, and safe offline fallback |
+| Passkeys | Supabase experimental registration and sign-in controls are implemented only for the installed mobile PWA; the project-level Passkeys/RP configuration must be enabled before use |
+| Marketing | Public landing page with a Three.js scene plus CSS fallback, animated construction SVG, GSAP scroll reveals, feature carousel, workflow outcome section, pricing, email-draft contact form, and footer |
 
 ### 2.3 Partial or prototype-only capabilities
 
@@ -82,6 +86,9 @@ and video files are represented by temporary object URLs and are not uploaded an
 - Gantt progress editing works, but durable drag/resize, reorder/reparent, dependency mutation, conflict handling, and rollback do not exist.
 - The task drawer is functional, but task deletion, multiple assignees, mentions, comment editing/deletion, and problem resolution are incomplete.
 - File and comment-media selection stores metadata/object URLs only; there is no upload progress, signed download, validation service, or persistence.
+- Project cover images are temporary object URLs for the same reason; durable covers should become private Storage attachments referenced by a project record.
+- The PWA is installable and has an offline fallback, but offline project reads/edits and background synchronization are intentionally not implemented before persistence and conflict handling.
+- Passkeys use Supabase's experimental API. They require a stable HTTPS relying-party domain and manual enablement in Authentication settings; changing the relying-party ID invalidates registered passkeys.
 - Activity resembles an audit trail but is mutable client memory, has no immutable before/after record, and is not security-grade.
 - Budget calculations work in the browser, but there are no atomic server transactions or authorization rules.
 - Workspace member invitations and real multi-user project assignments are not wired yet.
@@ -97,6 +104,9 @@ and video files are represented by temporary object URLs and are not uploaded an
 - Light/dark/system theming uses the browser's `prefers-color-scheme` preference and an early `color-scheme` declaration to prevent a mismatched initial render, following [MDN color-scheme guidance](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/color-scheme).
 - Long workspace/account labels are clipped safely and glide only while their parent control is hovered or keyboard-focused. Continuous marquee motion was rejected because moving content must be pausable and reduced-motion preferences must be respected; see [WCAG Pause, Stop, Hide](https://www.w3.org/WAI/WCAG21/Understanding/pause-stop-hide.html) and [W3C reduced-motion technique C39](https://www.w3.org/WAI/WCAG22/Techniques/css/C39).
 - Dynamic workspace routes use the Next.js `loading.tsx` convention so a prefetched skeleton appears immediately while server-rendered content streams. Server-action buttons also expose their own pending label and spinner, while a thin global progress line covers links and programmatic navigation.
+- The mobile field UX follows a list-first hierarchy: dashboard → project → task → focused update/activity. The desktop Gantt is hidden at phone widths rather than compressed into a low-usability timeline.
+- Install promotion is dismissible, remembered for seven days, and only appears after Chromium reports installability; iOS receives explicit Add to Home Screen instructions. The service worker does not cache authenticated product data.
+- Passkeys are WebAuthn credentials: device biometrics/PIN authorize a private key locally, and Planisher/Supabase receive a signed assertion rather than biometric data.
 
 ## 3. Newly promoted MVP requirements
 
@@ -294,6 +304,7 @@ never stored in this repository.
 - [ ] `H2-06` Build project-member assignment and cost-access controls. `M`
 - [ ] `H2-07` Implement centralized server policy guards; matching database RLS policies are applied. `M`
 - [ ] `H2-08` Test cross-workspace, project-role, guest, and finance boundaries. `M`
+- [x] `H2-09` Add experimental Supabase passkey sign-in/registration controls for the installed mobile PWA. Supabase dashboard RP enablement remains an environment step. `S`
 
 ### H3 - Persist and wire product workflows
 
@@ -321,6 +332,15 @@ never stored in this repository.
 - [ ] `H5-04` Build pricing, current-plan, usage-meter, limit-reached, and test-plan-switch UI. `M`
 - [ ] `H5-05` Add integration and end-to-end tests for every limit and downgrade state. `M`
 - [ ] `H5-06` Keep Stripe checkout/webhooks disabled until packaging behavior is approved. `XS`
+
+### H5B - Mobile field PWA and public site
+
+- [x] `H5B-01` Add a web manifest, icons, install guidance, service worker, and explicit offline fallback. `M`
+- [x] `H5B-02` Build mobile-specific dashboard, project, task, filter/search, and activity presentation without rendering the Gantt. `M`
+- [x] `H5B-03` Restrict the mobile task detail experience to progress, subtasks, comments, media selection, and raised problems. `S`
+- [x] `H5B-04` Add project cover selection, dashboard status visualization, and live locale clock. `M`
+- [x] `H5B-05` Build the public Three.js/GSAP marketing page with non-WebGL and reduced-motion fallbacks. `M`
+- [ ] `H5B-06` Add durable/offline-safe mobile reads and mutation synchronization only after H3 persistence and conflict handling. `M`
 
 ### H6 - Hosted development release
 

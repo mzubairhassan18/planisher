@@ -23,8 +23,10 @@ import { NewProjectButton } from "@/components/action-buttons";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { LocaleSummary } from "@/components/locale-summary";
 import { useLocalStore } from "@/components/local-store";
+import { MobileAppChrome } from "@/components/mobile-app-chrome";
 import { startNavigationProgress } from "@/components/navigation-progress";
 import { OverflowGlide } from "@/components/overflow-glide";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { ThemeControl } from "@/components/theme-control";
 
 export function AppShell({
@@ -245,6 +247,10 @@ export function AppShell({
       </aside>
 
       <div className="app-main">
+        <MobileAppChrome
+          userName={user.name}
+          workspaceName={workspaceName}
+        />
         <header className="topbar">
           <div className="global-search-wrap">
             <label className="global-search">
@@ -352,6 +358,7 @@ export function AppShell({
         </header>
         <main className="page-content">{children}</main>
       </div>
+      <PwaInstallPrompt />
     </div>
   );
 }

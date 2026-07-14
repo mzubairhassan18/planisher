@@ -45,6 +45,12 @@ export interface Project {
   endDate: string;
   budgetMinor: number;
   spentMinor: number;
+  coverImage?: {
+    name: string;
+    type: string;
+    sizeBytes: number;
+    url: string;
+  };
   teamIds: string[];
   tasks: ProjectTask[];
   dependencies: TaskDependency[];
