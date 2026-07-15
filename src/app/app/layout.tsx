@@ -6,6 +6,7 @@ import {
   mapStarterTemplates,
   type StarterTemplateRow,
 } from "@/lib/starter-templates";
+import { loadWorkspaceData } from "@/server/load-workspace-data";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -76,7 +77,7 @@ export default async function WorkspaceLayout({
   const { data: workspace } = membership?.workspace_id
     ? await supabase
         .from("workspaces")
-        .select("name")
+        .select("name, default_timezone, default_currency")
         .eq("id", membership.workspace_id)
         .maybeSingle()
     : { data: null };
@@ -103,19 +104,49 @@ export default async function WorkspaceLayout({
     .slice(0, 2)
     .map((part: string) => part[0]?.toUpperCase())
     .join("");
+  const currentUser = {
+    id: userId,
+    name: displayName,
+    initials: initials || "PU",
+    role: jobRole,
+    color: "#1f6b4f",
+  };
+  const starterTemplates = mapStarterTemplates(
+    starterTemplateRows as StarterTemplateRow[] | null,
+  );
+  const storeData =
+    membership?.workspace_id && workspace
+      ? await loadWorkspaceData({
+          currentUser,
+          starterTemplates,
+          supabase,
+          workspaceId: membership.workspace_id,
+        })
+      : {
+          projects: [],
+          templates: starterTemplates,
+          comments: [],
+          files: [],
+          activity: [],
+          budgetLines: [],
+          costEntries: [],
+          members: [currentUser],
+        };
 
   return (
     <LocalStoreProvider
-      currentUser={{
-        id: userId,
-        name: displayName,
-        initials: initials || "PU",
-        role: jobRole,
-        color: "#1f6b4f",
-      }}
-      initialTemplates={mapStarterTemplates(
-        starterTemplateRows as StarterTemplateRow[] | null,
-      )}
+      currency={workspace?.default_currency ?? "USD"}
+      currentUser={currentUser}
+      initialActivity={storeData.activity}
+      initialBudgetLines={storeData.budgetLines}
+      initialComments={storeData.comments}
+      initialCostEntries={storeData.costEntries}
+      initialFiles={storeData.files}
+      initialMembers={storeData.members}
+      initialProjects={storeData.projects}
+      initialTemplates={storeData.templates}
+      timezone={workspace?.default_timezone ?? "UTC"}
+      workspaceId={membership?.workspace_id ?? "00000000-0000-0000-0000-000000000000"}
     >
       <AppShell
         user={{ email, name: displayName }}

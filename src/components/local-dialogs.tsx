@@ -125,10 +125,10 @@ function NewProjectDialog() {
     >
       <form
         className="dialog-form"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
-          const id = createProject({
+          const id = await createProject({
             name: String(data.get("name")),
             code: String(data.get("code")),
             location: String(data.get("location")),
@@ -277,10 +277,10 @@ function NewTaskDialog({
     >
       <form
         className="dialog-form"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
-          addTask(projectId, {
+          await addTask(projectId, {
             title: String(data.get("title")),
             startDate: String(data.get("startDate")),
             endDate: String(data.get("endDate")),
@@ -371,10 +371,10 @@ function NewTemplateDialog() {
     >
       <form
         className="dialog-form"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
-          createTemplate({
+          await createTemplate({
             name: String(data.get("name")),
             sourceProjectId: String(data.get("sourceProjectId")),
           });
@@ -428,14 +428,14 @@ function DeleteProjectDialog({ projectId }: { projectId: string }) {
   return (
     <DialogFrame
       title="Delete project?"
-      description="This removes the project, tasks, comments, files, and cost records from this local session."
+      description="This permanently removes the project, tasks, comments, files, and cost records from the workspace."
     >
       <div className="delete-project-content">
         <div className="danger-callout">
           <Trash2 aria-hidden="true" size={18} />
           <span>
             <strong>{project.name}</strong>
-            This cannot be undone after the local project is deleted.
+            This cannot be undone after the project is deleted.
           </span>
         </div>
         <footer className="dialog-actions">
@@ -448,8 +448,8 @@ function DeleteProjectDialog({ projectId }: { projectId: string }) {
           </button>
           <button
             className="danger-button"
-            onClick={() => {
-              deleteProject(project.id);
+            onClick={async () => {
+              await deleteProject(project.id);
               startNavigationProgress();
               router.push("/app/projects");
             }}
@@ -483,11 +483,11 @@ function BudgetLineDialog({
     >
       <form
         className="dialog-form"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
           const linkedTaskId = String(data.get("taskId") || "") || undefined;
-          addBudgetLine({
+          await addBudgetLine({
             projectId,
             taskId: linkedTaskId,
             category: String(data.get("category")),
@@ -589,11 +589,11 @@ function CostEntryDialog({
     >
       <form
         className="dialog-form"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
           const linkedTaskId = String(data.get("taskId") || "") || undefined;
-          addCostEntry({
+          await addCostEntry({
             projectId,
             taskId: linkedTaskId,
             budgetLineId:
@@ -900,7 +900,7 @@ function TaskDrawer({
   const status = getTaskScheduleStatus(task);
   const originalTitle = task.title;
 
-  function saveTask(form: HTMLFormElement) {
+  async function saveTask(form: HTMLFormElement) {
     const data = new FormData(form);
     const nextTitle = String(data.get("title")).trim() || originalTitle;
     const nextDescription = String(data.get("description")).trim();
@@ -917,7 +917,7 @@ function TaskDrawer({
     setEndDate(nextEndDate);
     setAssigneeId(nextAssigneeId);
     setProgress(nextProgress);
-    updateTask(projectId, taskId, {
+    await updateTask(projectId, taskId, {
       title: nextTitle,
       description: nextDescription,
       startDate: nextStartDate,
@@ -962,9 +962,9 @@ function TaskDrawer({
 
         <form
           className="drawer-section task-edit-form"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
-            saveTask(event.currentTarget);
+            await saveTask(event.currentTarget);
           }}
         >
           <div className="drawer-section-title">
@@ -1204,10 +1204,10 @@ function TaskDrawer({
           </div>
           <form
             className="comment-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
               const form = event.currentTarget;
-              addComment(
+              await addComment(
                 projectId,
                 taskId,
                 commentBody,

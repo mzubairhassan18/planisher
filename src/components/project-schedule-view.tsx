@@ -94,7 +94,7 @@ export function ProjectScheduleView({
         onAddTask={() => openNewTask(project.id)}
         onSelectTask={(taskId) => openTask(project.id, taskId)}
         onUpdateProgress={(taskId, progress) =>
-          updateTask(project.id, taskId, { progress })
+          void updateTask(project.id, taskId, { progress }).catch(() => undefined)
         }
         project={project}
         today={localToday}

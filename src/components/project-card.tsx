@@ -79,8 +79,8 @@ export function ProjectCard({
                   Open overview
                 </Link>
                 <button
-                  onClick={() => {
-                    const projectId = duplicateProject(project.id);
+                  onClick={async () => {
+                    const projectId = await duplicateProject(project.id);
                     setMenuOpen(false);
                     startNavigationProgress();
                     router.push(`/app/projects/${projectId}/overview`);

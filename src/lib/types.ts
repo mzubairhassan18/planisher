@@ -95,6 +95,7 @@ export interface ProjectFile {
   name: string;
   sizeBytes: number;
   type: string;
+  url?: string;
   uploadedAt: string;
 }
 
@@ -138,4 +139,15 @@ export interface LocaleSettings {
   region: string;
   timezone: string;
   currency: string;
+}
+
+export interface PersistedWorkspaceStore {
+  projects: Project[];
+  templates: ProjectTemplate[];
+  comments: TaskComment[];
+  files: ProjectFile[];
+  activity: ActivityItem[];
+  budgetLines: BudgetLine[];
+  costEntries: CostEntry[];
+  members: TeamMember[];
 }

@@ -1,9 +1,9 @@
 # Planisher — Product, Architecture, and Build Plan
 
-Status: Local UI prototype implemented; hosted development architecture approved and in implementation
+Status: Hosted Supabase persistence implemented for core project workflows; user management, limits, and hardening remain in implementation
 Prepared: 2026-07-04
-Last revised: 2026-07-14
-Scope: Desktop-first planning plus a mobile-first installable PWA field view. The next milestone promotes user management, PostgreSQL persistence, private file storage, and plan-limit enforcement into active scope. Native apps and real payment collection remain deferred.
+Last revised: 2026-07-15
+Scope: Desktop-first planning plus a mobile-first installable PWA field view. Authentication, core PostgreSQL persistence, and private file storage are active; user management, plan-limit enforcement, concurrency, and hardening remain next. Native apps and real payment collection remain deferred.
 
 > Current execution source of truth: [Current State and Hosted Development Roadmap](./CURRENT_STATE_AND_HOSTED_ROADMAP.md). This document remains the detailed product specification and design history.
 
@@ -40,12 +40,13 @@ The work has followed this order:
 5. wire every approved interface to the hosted backend and remove production-path mock state;
 6. harden tenant isolation, accessibility, uploads, performance, and release operations.
 
-The current product runtime is a client-side React memory store that starts empty. A
-browser refresh clears temporary product data, and no sample projects, tasks, users,
-files, activity, or costs are created automatically. Selected media exists only as
-temporary browser object URLs. Supabase Auth and the PostgreSQL schema are connected;
-the next architecture slice moves product-data ownership out of `LocalStoreProvider`
-through server-side policies, repositories, and application services.
+The current product runtime loads authorized workspace records from Supabase PostgreSQL
+and treats React state as an interactive presentation cache. Projects, copied template
+tasks, hierarchy, dependencies, comments/problems, budgets, expenses, activity, covers,
+and project media survive refresh. Database RLS is the authoritative tenant/project
+boundary, and private media is served through time-limited signed URLs. The next
+architecture slice adds versioned application services, transaction boundaries,
+optimistic concurrency, complete user management, and usage entitlements.
 
 ## 2. Product position
 
@@ -80,7 +81,7 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 - **Fast daily updates:** common field updates should require a few taps.
 - **Safe reuse:** duplication copies the plan, not historical noise or sensitive actual costs by accident.
 - **Explain schedule status:** blue, red, green, and gray states must have plain-language labels.
-- **Hosted development next:** the planning workflow has been proven locally; identity, persistence, tenant boundaries, media storage, and plan enforcement are now the active foundation.
+- **Hosted foundation:** identity, core product persistence, tenant RLS, and private media are wired; member management, plan enforcement, transactions, and conflict handling are the active foundation work.
 - **Construction collaboration should not be taxed:** restricted clients and subcontractor guests should not require full paid seats.
 - **Accessible status:** color is never the only signal.
 
@@ -94,7 +95,7 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 - Personal workspace creation during onboarding and support for additional workspaces.
 - Workspace member invitation, acceptance, role change, deactivation, and workspace switching.
 - Project membership, project-specific roles, and separate cost visibility.
-- Seeded demo data remains available only as an explicit onboarding/testing option.
+- New workspaces start empty; five persistent read-only starter plans are available without creating fake projects or users.
 
 #### Projects
 
@@ -142,7 +143,7 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 - Feature entitlement checks for pricing plans.
 - Usage counts for active projects, full members, storage, and tasks.
 - Empty, loading, permission-denied, validation, and recoverable error states.
-- Seeded demo workspace and resettable in-memory data.
+- Empty real workspaces with persistent Supabase data; a safe development reset tool remains pending.
 
 ### 3.2 Explicitly outside the MVP
 
@@ -161,13 +162,13 @@ Large high-rise and enterprise customers remain an architectural requirement, no
 
 ### 3.3 Definition of an “interaction” for audit
 
-For the local prototype, “audit every interaction” means every state-changing business action:
+For the hosted product, “audit every interaction” means every state-changing business action:
 
 - project/task/budget/comment/file/member changes;
 - project duplication/template creation;
 - archive, restore, and export operations.
 
-Ordinary reads, mouse movement, filters, and page views will not enter the business audit feed in the MVP. They create noise and may introduce privacy concerns. Authentication and security events are added when login support is implemented.
+Ordinary reads, mouse movement, filters, and page views will not enter the business audit feed in the MVP. They create noise and may introduce privacy concerns. Product-mutation audit events are implemented but currently best-effort and non-atomic; complete authentication/security audit coverage and transactional mutation-plus-audit writes remain hardening work.
 
 ## 4. Personas and primary journeys
 
@@ -182,7 +183,7 @@ Ordinary reads, mouse movement, filters, and page views will not enter the busin
 | Finance manager | Track commitments, spend, and variance | Budget and cost-entry views |
 | Subcontractor | See and update assigned work | Restricted assigned tasks and comments |
 | Client/stakeholder | Follow progress without editing the plan | Read-only overview/timeline and comments |
-| Workspace administrator | Future management of people, security, and product settings | Deferred until authentication is added |
+| Workspace administrator | Manage people, security, and product settings | Authentication exists; member invitation and administration UI remain pending |
 
 ### 4.2 Critical journeys
 
@@ -751,22 +752,21 @@ GET         /api/v1/organizations/:organizationId/assignees
 GET         /api/v1/me/work
 ```
 
-### 10.5 Prototype memory state and retirement
+### 10.5 Workspace state coordinator and service extraction
 
-The implemented prototype uses React `useState` in `LocalStoreProvider` and starts
-with empty product collections. It uses the authenticated Supabase user as the only
-initial actor/member, is not the previously proposed process-wide repository adapter,
-and does not survive a browser refresh. Comment media uses temporary object URLs;
-project files retain only client-memory metadata.
+`LocalStoreProvider` now hydrates from authenticated Supabase queries and writes every
+implemented mutation to PostgreSQL/Storage before treating it as saved. It remains the
+React interaction/cache coordinator so the established desktop and PWA interfaces do
+not need a wholesale rewrite. It is no longer the durable source of truth.
 
-Retirement rules:
+Extraction rules:
 
-- do not add new backend behavior to `LocalStoreProvider`;
-- preserve it temporarily as a UI fixture while hosted services are wired feature by feature;
-- create deterministic PostgreSQL seed/reset tooling for development instead of migrating ephemeral prototype state;
-- introduce optimistic record versions and transactions in application services/Data API repositories;
-- remove production-path mock imports after each critical journey uses persistent APIs;
-- keep isolated factories or fixtures for unit/component tests after runtime mock ownership is removed.
+- keep tenant/project authorization in RLS rather than UI state;
+- move multi-record operations into versioned server application services or reviewed RPC transaction boundaries;
+- create deterministic PostgreSQL seed/reset tooling for development;
+- introduce optimistic record versions, idempotency, and conflict responses;
+- retain the provider only as client state/cache orchestration or replace it incrementally with query/mutation hooks;
+- keep isolated factories or fixtures for unit/component tests without production-path mock data.
 
 ### 10.6 Hosted persistence path
 
@@ -774,11 +774,11 @@ Retirement rules:
 2. Configure validated environment variables and a project-scoped MCP connection with reviewed migration-only writes.
 3. Define Drizzle PostgreSQL schemas, RLS policies, and reviewed migrations.
 4. Keep domain types independent of Drizzle row types and Supabase client response types.
-5. Implement Supabase Auth session resolution, application policy guards, and Supabase Data API repositories.
+5. Implement Supabase Auth session resolution and RLS-protected Supabase Data API loading/mutations. Core workflows are complete; a versioned service boundary remains.
 6. Add transaction behavior so mutations and audit events succeed or fail together.
 7. Seed deterministic development data and run contract/tenant-isolation tests against PostgreSQL.
-8. Create private Supabase Storage buckets, attachment metadata, RLS, validation, signed access, and usage accounting.
-9. Wire frontend journeys feature by feature and remove their `LocalStoreProvider` product-state ownership.
+8. Create private Supabase Storage buckets, attachment metadata, RLS, validation, signed access, and usage accounting. Core private upload/signed access is complete; checksum/scanning/usage enforcement remains.
+9. Wire frontend journeys feature by feature and reduce `LocalStoreProvider` to client state coordination. Core implemented journeys are persistent.
 10. Implement test subscriptions and enforce active-project, task, member, guest, feature, and storage limits.
 11. Add backup/export and recovery documentation before treating any hosted data as durable.
 12. Keep `FileStorage` and `BillingProvider` boundaries so Cloudflare R2 and Stripe can be introduced later.

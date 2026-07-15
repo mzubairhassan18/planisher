@@ -12,6 +12,7 @@ import {
 import { NewProjectButton } from "@/components/action-buttons";
 import { useLocalStore } from "@/components/local-store";
 import { ProjectCard } from "@/components/project-card";
+import { MobileProjectRow } from "@/components/mobile-project-row";
 import { localToday } from "@/lib/local-date";
 import { getProjectScheduleStatus } from "@/lib/progress";
 import type { ScheduleStatus } from "@/lib/types";
@@ -133,17 +134,28 @@ export default function ProjectsPage() {
       </div>
 
       {visibleProjects.length ? (
-        <div
-          className={
-            layout === "list"
-              ? "project-grid large list-view"
-              : "project-grid large"
-          }
-        >
-          {visibleProjects.map((project) => (
-            <ProjectCard project={project} today={localToday} key={project.id} />
-          ))}
-        </div>
+        <>
+          <div
+            className={
+              layout === "list"
+                ? "project-grid large list-view desktop-project-grid"
+                : "project-grid large desktop-project-grid"
+            }
+          >
+            {visibleProjects.map((project) => (
+              <ProjectCard project={project} today={localToday} key={project.id} />
+            ))}
+          </div>
+          <div className="mobile-project-list">
+            {visibleProjects.map((project) => (
+              <MobileProjectRow
+                key={project.id}
+                project={project}
+                today={localToday}
+              />
+            ))}
+          </div>
+        </>
       ) : (
         <article className="content-card project-empty-results">
           <FolderSearch aria-hidden="true" size={28} />

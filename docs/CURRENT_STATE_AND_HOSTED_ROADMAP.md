@@ -23,43 +23,42 @@ The product should stay easy enough for one person building a house while retain
 
 ### 2.1 Runtime architecture today
 
-The repository now contains three deliberate presentation surfaces: a desktop planning
-prototype, an installable mobile-first PWA field view, and a public marketing site.
-Hosted identity and the starter-plan catalog use Supabase; user-created product records
-still use the browser-local prototype store. The next backend slice replaces that
-remaining store with server-controlled Supabase data access.
+The repository contains three deliberate presentation surfaces: a desktop planning
+workspace, a mobile-specific field UI that is optionally installable as a PWA, and a public marketing site.
+Supabase now provides identity, tenant-scoped product persistence, private media, and
+the starter-plan catalog. React state remains an optimistic presentation cache; a fresh
+authenticated request rebuilds the workspace from PostgreSQL.
 
 ```mermaid
 flowchart LR
-    UI["Next.js product UI"] --> STORE["LocalStoreProvider"]
-    STORE --> STATE["React useState memory"]
-    STATE --> EMPTY["Empty by default"]
-    STATE --> URLS["Temporary browser object URLs for media"]
+    UI["Next.js product UI"] --> STORE["Workspace state coordinator"]
+    STORE --> DATAAPI["Authenticated Supabase client"]
+    DATAAPI --> DB["Supabase PostgreSQL<br/>RLS-protected product tables"]
+    STORE --> STORAGE["Private Supabase Storage<br/>signed media access"]
     AUTHUI["Next.js auth routes"] --> AUTH["Supabase Auth"]
-    DB["Supabase PostgreSQL<br/>18 RLS-protected tables"]
     DB --> CATALOG["Read-only starter templates<br/>and realistic task sequences"]
     CATALOG --> UI
-    UI -. "remaining product wiring next" .-> DB
+    DB --> UI
 ```
 
 There are currently:
 
-- no API route handlers for product data;
-- no application-service or repository layer in the runtime;
-- Drizzle schemas plus two reviewed migrations applied to the personal Supabase development project;
+- no versioned API route layer yet; the authenticated Supabase client and RLS are the current persistence boundary;
+- no full application-service/repository abstraction or optimistic concurrency layer yet;
+- Drizzle schemas and reviewed schema, RLS, onboarding, starter-catalog, and private-media/audit migrations;
 - working Supabase sign-up, sign-in, sign-out, callback, password-reset, and cookie-session handling;
 - authenticated route protection for `/app`;
 - mandatory first-login onboarding for profile, role, workspace type/name, estimated team size, timezone, and currency;
-- no server-side authorization or tenant enforcement;
+- database-enforced workspace/project authorization through RLS;
 - no subscription or usage-limit enforcement;
-- no durable object/file storage.
+- durable private object/file storage with signed access.
 
-A full browser refresh clears user-created product data and returns to an empty
-workspace. No fake projects, users, costs, activity, or media are created. Five
-read-only starter plans (single-storey house, double-storey house, multi-storey
-building, hospital, and school) are loaded from Supabase for authenticated users.
-The only runtime identity is the authenticated Supabase user. Selected image, audio,
-and video files are represented by temporary object URLs and are not uploaded anywhere.
+A full browser refresh reloads the user's authorized projects, tasks, dependencies,
+comments, audit activity, budgets, costs, and attachment metadata from Supabase. No fake
+projects, users, costs, activity, or media are created. Five read-only starter plans
+(single-storey house, double-storey house, multi-storey building, hospital, and school)
+are loaded from Supabase for authenticated users. Project covers, documents, images,
+audio, and video use private Storage objects and time-limited signed URLs.
 
 ### 2.2 Working prototype capabilities
 
@@ -67,14 +66,14 @@ and video files are represented by temporary object URLs and are not uploaded an
 | --- | --- |
 | Application shell | Desktop navigation, project/workspace menu, user menu, locale summary, global search, overflow-safe identity labels, light/dark/system themes, global navigation progress, and route loading skeletons |
 | Dashboard | Live locale date/time, portfolio metrics, an accessible status donut, project cards, delayed-task links, recent activity, and budget summary |
-| Projects | Create blank or template-based project with an optional temporary cover image, search, status filter, grid/list view, duplicate, save as template, and delete |
-| Templates | Load five persistent, RLS-protected starter plans; create temporary workspace templates; reuse tasks/dependencies with shifted dates and reset progress |
+| Projects | Persist blank or template-based projects with optional private covers; search, filter, duplicate, save as template, and permanently delete |
+| Templates | Load five persistent, RLS-protected starter plans; create persistent workspace templates; reuse tasks/dependencies with shifted dates and reset progress |
 | Schedule | DHTMLX Gantt rendering, hierarchy, subtask creation, milestones, dependencies, day/week/month scale, task search, delayed filter, progress drag, issue flag, and focused task highlight |
 | Task drawer | Edit title, description, dates, assignee, and progress; create a subtask; add task-linked budget/expense; add comments or raised problems |
-| Comments/media | Text comments and problems can select images, audio, or video for temporary local preview |
+| Comments/media | Persist text comments and raised problems with private image, audio, or video uploads and signed rendering |
 | Budget | Portfolio totals, project budget lines, commitments/actual expenses, task/category filters, and task-linked costs |
-| Files | File selection and metadata display in local memory |
-| Activity | Local mutation feed, activity detail drawer, and navigation to related project/task/comment/budget/file view |
+| Files | Private Storage upload, persistent metadata, signed open action, and project-scoped access |
+| Activity | Append-only audit records, activity detail drawer, and navigation to related project/task/comment/budget/file views |
 | Locale | Browser locale, timezone, and currency detection with local overrides/fallbacks |
 | Mobile PWA | Manifest, icon/maskable icon, install suggestion, app chrome, compact dashboard, active-project list, searchable/filterable task lists, hierarchy/dependency cues, full-screen field updates/activity, account/logout menu, phone-synchronized light/dark theme, and safe offline fallback |
 | Passkeys | Supabase experimental registration and sign-in controls are implemented only for the installed mobile PWA; the project-level Passkeys/RP configuration must be enabled before use |
@@ -85,12 +84,12 @@ and video files are represented by temporary object URLs and are not uploaded an
 - Project creation exists, but full edit, archive, and restore workflows are incomplete.
 - Gantt progress editing works, but durable drag/resize, reorder/reparent, dependency mutation, conflict handling, and rollback do not exist.
 - The task drawer is functional, but task deletion, multiple assignees, mentions, comment editing/deletion, and problem resolution are incomplete.
-- File and comment-media selection stores metadata/object URLs only; there is no upload progress, signed download, validation service, or persistence.
-- Project cover images are temporary object URLs for the same reason; durable covers should become private Storage attachments referenced by a project record.
-- The PWA is installable and has an offline fallback, but offline project reads/edits and background synchronization are intentionally not implemented before persistence and conflict handling.
+- File and media persistence is wired, but granular upload progress, retry/cancellation, checksum generation, malware scanning, and storage-entitlement enforcement remain incomplete.
+- Project cover images are persistent private attachments. Replacing an existing cover and media deletion still need dedicated UI workflows.
+- The PWA is installable and has an offline fallback, but authenticated offline project reads/edits and background synchronization still require conflict handling, a durable client cache, and a synchronization queue.
 - Passkeys use Supabase's experimental API. They require a stable HTTPS relying-party domain and manual enablement in Authentication settings; changing the relying-party ID invalidates registered passkeys.
-- Activity resembles an audit trail but is mutable client memory, has no immutable before/after record, and is not security-grade.
-- Budget calculations work in the browser, but there are no atomic server transactions or authorization rules.
+- Activity is append-only in PostgreSQL and actor/workspace/project scoped when written, but most audit writes are currently best-effort and non-atomic with their product mutation. Transactional audit, detailed redacted before/after payloads, and export retention policies remain incomplete.
+- Budget records and authorization are persistent; multi-record operations still need explicit transaction/RPC boundaries and optimistic version conflicts.
 - Workspace member invitations and real multi-user project assignments are not wired yet.
 - Some prototype source strings contain character-encoding artifacts and need a cleanup pass.
 - Automated unit, integration, end-to-end, accessibility, tenant-isolation, and large-Gantt tests are still missing.
@@ -311,20 +310,37 @@ never stored in this repository.
 
 ### H3 - Persist and wire product workflows
 
+Core persistence completed on 2026-07-15: authenticated loading plus create/duplicate/delete
+projects, persistent workspace templates, task/subtask creation, task editing/progress,
+assignees, copied dependencies, comments/problems, audit navigation, budget lines, and
+cost entries. The broader checklist stays open where archive/restore, dependency editing,
+mentions, versioned APIs, transaction boundaries, and conflict handling are still missing.
+
 - [ ] `H3-01` Add versioned API helpers, validation, request IDs, and normalized errors. `M`
-- [ ] `H3-02` Persist and wire projects, templates, duplication, archive, restore, and delete. `M`
-- [ ] `H3-03` Persist and wire tasks, assignees, progress, dates, hierarchy, ordering, and dependencies. `M`
-- [ ] `H3-04` Persist and wire comments, raised problems, mentions, and activity/audit navigation. `M`
-- [ ] `H3-05` Persist and wire budget lines, commitments, actual costs, and derived totals. `M`
+- [x] `H3-02A` Persist and wire project create, duplicate, delete, and workspace-template creation. `M`
+- [ ] `H3-02B` Complete project edit, archive, and restore. `S`
+- [x] `H3-03A` Persist task/subtask creation and task title, dates, progress, assignee, hierarchy, and copied dependencies. `M`
+- [ ] `H3-03B` Complete task delete, reorder/reparent, and dependency mutation. `M`
+- [x] `H3-04A` Persist comments, raised problems, and activity navigation. `M`
+- [ ] `H3-04B` Complete mentions, comment edit/delete, and problem resolution. `M`
+- [x] `H3-05A` Persist budget lines, commitments, actual costs, and current summaries. `M`
+- [ ] `H3-05B` Move derived totals and multi-record writes behind a transactional service boundary. `M`
 - [ ] `H3-06` Add optimistic record versions, conflict responses, and Gantt rollback. `M`
 - [ ] `H3-07` Remove product-data ownership from `LocalStoreProvider` after every wired journey passes. `M`
 
 ### H4 - Durable files and media
 
-- [ ] `H4-01` Create private buckets and Storage RLS policies. `M`
-- [ ] `H4-02` Implement attachment authorization, metadata, checksum, type, name, and size validation. `M`
-- [ ] `H4-03` Wire upload progress, retry, cancellation, deletion, and short-lived signed access. `M`
-- [ ] `H4-04` Wire image/audio/video rendering from persisted attachment records. `M`
+The private `project-attachments` bucket, project-scoped Storage policies, attachment
+metadata writes, signed rendering, project covers, project files, and comment image/audio/
+video uploads are implemented by migration `0004_persistent_storage_and_audit.sql`.
+Advanced upload controls, checksums, scanning, deletion UI, and entitlement enforcement
+remain open below.
+
+- [x] `H4-01` Create the private attachment bucket and project-scoped Storage RLS policies. `M`
+- [x] `H4-02A` Implement attachment authorization, metadata, basic type/name/size validation, and signed access. `M`
+- [ ] `H4-02B` Add checksums, stricter content validation, and malware quarantine. `M`
+- [ ] `H4-03` Wire granular upload progress, retry, cancellation, and deletion. `M`
+- [x] `H4-04` Wire persisted project covers, files, and comment image/audio/video rendering. `M`
 - [ ] `H4-05` Test cross-workspace access denial and storage-limit enforcement. `M`
 
 ### H5 - Plans, pricing, and limits
@@ -343,7 +359,7 @@ never stored in this repository.
 - [x] `H5B-03` Restrict the mobile task detail experience to progress, subtasks, comments, media selection, and raised problems. `S`
 - [x] `H5B-04` Add project cover selection, dashboard status visualization, and live locale clock. `M`
 - [x] `H5B-05` Build the public Three.js/GSAP marketing page with non-WebGL and reduced-motion fallbacks. `M`
-- [ ] `H5B-06` Add durable/offline-safe mobile reads and mutation synchronization only after H3 persistence and conflict handling. `M`
+- [ ] `H5B-06` Add durable/offline-safe mobile reads and mutation synchronization after conflict handling and offline-cache design. `M`
 
 ### H6 - Hosted development release
 
@@ -359,7 +375,7 @@ reset are considered verified.
 - [x] `H6-03` Deploy the personal testing build to Vercel Hobby. `S`
 - [ ] `H6-04` Document reset, backup/export, known limits, and recovery procedures. `M`
 
-## 10. Hosted-development definition of done
+## 10. Remaining hosted-development definition of done
 
 - A new user can create an account, verify/sign in, and receive a workspace.
 - An owner can invite/deactivate members and assign workspace/project roles.

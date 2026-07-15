@@ -43,8 +43,9 @@ export default function LocalSettingsPage() {
           <div>
             <h2>Saved in Supabase</h2>
             <p>
-              Your account, profile, workspace membership, and published starter
-              templates are stored in the hosted Supabase backend.
+              Accounts, workspaces, projects, task schedules, comments, costs,
+              activity, and published starter templates are stored in the hosted
+              Supabase backend.
             </p>
             <span className="local-pill hosted">Hosted</span>
           </div>
@@ -52,13 +53,13 @@ export default function LocalSettingsPage() {
         <article className="content-card settings-card">
           <HardDrive aria-hidden="true" size={22} />
           <div>
-            <h2>Temporary in this release</h2>
+            <h2>Private project media</h2>
             <p>
-              Projects you create, their tasks, comments, costs, cover images,
-              and uploaded media still live in browser memory and clear on refresh.
-              Do not use them for irreplaceable project records yet.
+              Project covers, files, images, audio, and videos are uploaded to a
+              private Supabase Storage bucket. Access uses expiring signed links
+              and the same project permissions as the database.
             </p>
-            <span className="local-pill">Not yet persisted</span>
+            <span className="local-pill hosted">Private and persistent</span>
           </div>
         </article>
       </div>

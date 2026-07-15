@@ -2,7 +2,7 @@
 
 Planisher is a construction planning SaaS for owner-builders, residential builders, contractors, and larger project teams. It brings the programme, progress, task discussions, costs, files, and decisions into one calm workspace built around a Gantt schedule.
 
-The current milestone combines the desktop planning prototype with a mobile-first installable PWA field view and a public marketing site. Supabase provides authentication, onboarding/workspace records, passkey APIs, and a persistent read-only starter-template catalog. Projects created from those templates still use the browser-local prototype store and will be moved to Supabase in the next backend slice.
+The current milestone combines the desktop planning workspace with a mobile-specific field UI that can optionally be installed as a PWA, plus a public marketing site. Supabase provides authentication, tenant-scoped PostgreSQL persistence, private project media, passkey APIs, onboarding/workspace records, and the starter-template catalog.
 
 ## What works today
 
@@ -12,11 +12,11 @@ The current milestone combines the desktop planning prototype with a mobile-firs
 - Blank or template-based project creation with shifted dates and reset progress.
 - Optional project cover images, nested subtask creation, project dashboard charts, live local time, search, filters, duplicate/delete actions, and workspace templates.
 - DHTMLX Gantt schedule with tasks, dependencies, progress, status colors, issue flags, and task focus links.
-- Editable task drawer with comments/problems and temporary image, audio, and video previews.
-- Installable mobile PWA with a compact dashboard, project list, searchable/filterable task list, hierarchy/dependency cues, field-focused task updates, activity navigation, an account/logout menu, phone-synchronized light/dark appearance, and offline fallback.
+- Editable task drawer with comments/problems and persistent private image, audio, and video attachments.
+- Mobile-specific, single-column field UI that is optionally installable as a PWA, with a compact dashboard, project list, searchable/filterable task list, hierarchy/dependency cues, field-focused task updates, activity navigation, an account/logout menu, phone-synchronized light/dark appearance, and offline fallback.
 - Experimental mobile-PWA passkey controls for Face ID, fingerprint, device PIN, or security-key sign-in after Supabase Passkeys is enabled.
 - Public Planisher landing page with rotating residential, school, and high-rise Three.js builds, a scroll-controlled construction story, GSAP reveals, capability carousel, outcome stories, pricing, contact form, and footer. Signed-in visitors receive one Dashboard action instead of sign-in calls to action.
-- Project/task budget and expense entry in the local prototype store.
+- Persistent project/task budgets and expense entries protected by workspace and project permissions.
 - Browser-based timezone and currency detection.
 - Light, dark, and system themes; theme preference is remembered in the browser.
 - Pending labels and spinners for server actions, a global route-progress bar, and streamed workspace loading skeletons.
@@ -63,7 +63,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 
 The publishable key is intended for browser use. Never put a Supabase secret key or service-role key in a `NEXT_PUBLIC_` variable, source control, or a client component.
 
-The repository’s reviewed database changes are in [`drizzle/`](drizzle/). Apply them to a development Supabase project in numeric order. The starter-template catalog is created by `0003_starter_template_catalog.sql` and is readable only by authenticated users through RLS.
+The repository’s reviewed database changes are in [`drizzle/`](drizzle/). Apply them to a development Supabase project in numeric order. The starter-template catalog is created by `0003_starter_template_catalog.sql`; `0004_persistent_storage_and_audit.sql` creates the private attachment bucket, project-scoped Storage policies, and authenticated append-only audit function.
 
 ### 3. Start the development server
 
@@ -111,10 +111,10 @@ pnpm build
 | Accounts and sessions | Supabase Auth | Yes |
 | Profile, workspace, and subscription seed | Supabase PostgreSQL | Yes |
 | Built-in starter templates and template tasks | Supabase PostgreSQL | Yes |
-| User-created projects, tasks, comments, costs, and activity | React browser-memory prototype | No; refresh clears them |
-| Project covers, selected comment media, and files | Temporary browser object URLs | No |
+| User-created projects, tasks, comments, costs, and activity | Supabase PostgreSQL with RLS | Yes |
+| Project covers, selected comment media, and files | Private Supabase Storage with attachment metadata | Yes |
 
-This distinction is intentional and visible in the UI. Do not use the current build for a real construction project or irreplaceable records. The next major implementation slice replaces the local product store with server-controlled Supabase records and private Storage uploads.
+The authenticated workspace loads its state from Supabase on every fresh request. Client changes are written through the authenticated Supabase client, checked by tenant/project RLS, and reported visibly if persistence fails. Private media is served through time-limited signed URLs. Core project, task, comment, budget, cost, and file writes persist; audit writes are append-only when written but remain best-effort and non-atomic until the application-service transaction boundary is completed.
 
 ## Starter-template policy
 
@@ -149,7 +149,7 @@ Supabase Auth URL Configuration must include the local callback and every deploy
 - The starter catalog grants authenticated users `SELECT` only; there are no client write policies.
 - Authorization must not use editable `user_metadata` claims.
 - Never commit `.env.local`, database passwords, secret keys, or service-role keys.
-- The local prototype’s UI permission states are not yet a complete server authorization boundary; see the roadmap before extending it to real customer data.
+- PostgreSQL RLS is the authoritative data boundary. UI permission states remain a presentation convenience and must never replace those server-enforced policies.
 
 ## License
 

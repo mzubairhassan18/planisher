@@ -18,6 +18,7 @@ import {
 import { useLocalStore } from "@/components/local-store";
 import { MetricCard } from "@/components/metric-card";
 import { ProjectCard } from "@/components/project-card";
+import { MobileProjectRow } from "@/components/mobile-project-row";
 import { localToday } from "@/lib/local-date";
 import {
   countTasksByStatus,
@@ -116,11 +117,31 @@ export default function DashboardPage() {
             <ArrowRight aria-hidden="true" size={15} />
           </Link>
         </div>
-        <div className="project-grid">
+        <div className="project-grid desktop-project-grid">
           {projects.length ? (
             projects.map((project) => (
               <ProjectCard project={project} today={localToday} key={project.id} />
             ))
+          ) : (
+            <article className="content-card placeholder-card">
+              <FolderKanban aria-hidden="true" size={28} />
+              <h2>No projects yet</h2>
+              <p>Create a blank project to begin building your schedule.</p>
+              <NewProjectButton />
+            </article>
+          )}
+        </div>
+        <div className="mobile-project-list">
+          {projects.length ? (
+            projects
+              .slice(0, 4)
+              .map((project) => (
+                <MobileProjectRow
+                  key={project.id}
+                  project={project}
+                  today={localToday}
+                />
+              ))
           ) : (
             <article className="content-card placeholder-card">
               <FolderKanban aria-hidden="true" size={28} />
@@ -173,6 +194,10 @@ export default function DashboardPage() {
               <span className="eyebrow">Live record</span>
               <h2>Recent activity</h2>
             </div>
+            <Link className="text-link mobile-activity-view-all" href="/app/activity">
+              View all
+              <ArrowRight aria-hidden="true" size={14} />
+            </Link>
           </div>
           {activity.length ? activity.map((item) => {
             const member = members.find((candidate) => candidate.id === item.actorId);

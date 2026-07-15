@@ -229,15 +229,15 @@ export function AppShell({
         <div className="demo-note">
           <Sparkles aria-hidden="true" size={16} />
           <span>
-            <strong>Development build</strong>
-            Project data is temporary
+            <strong>Cloud workspace</strong>
+            Projects are saved privately
           </span>
         </div>
 
         <nav className="secondary-nav" aria-label="Secondary navigation">
           <Link className="nav-link" href="/app/settings/local">
             <Settings aria-hidden="true" size={18} />
-            Local settings
+            Settings
           </Link>
           <a className="nav-link" href="#help">
             <CircleHelp aria-hidden="true" size={18} />

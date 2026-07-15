@@ -154,9 +154,9 @@ function ProjectFiles({ projectId }: { projectId: string }) {
             Add file
             <input
               type="file"
-              onChange={(event) => {
+              onChange={async (event) => {
                 const file = event.target.files?.[0];
-                if (file) addFile(projectId, file);
+                if (file) await addFile(projectId, file);
                 event.target.value = "";
               }}
             />
@@ -172,9 +172,19 @@ function ProjectFiles({ projectId }: { projectId: string }) {
                 <span>
                   <strong>{file.name}</strong>
                   <small>
-                    {formatBytes(file.sizeBytes)} · Added to local memory
+                    {formatBytes(file.sizeBytes)} · Saved privately
                   </small>
                 </span>
+                {file.url ? (
+                  <a
+                    className="text-link"
+                    href={file.url}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Open
+                  </a>
+                ) : null}
               </div>
             ))}
           </div>
